@@ -7,8 +7,6 @@ description = "REST API for e2ejournal (Axum + SQLx/Postgres)"
 [dependencies]
 anyhow.workspace = true
 axum.workspace = true
-axum-extra.workspace = true
-cookie.workspace = true
 db.workspace = true
 dotenvy.workspace = true
 errors.workspace = true
@@ -19,4 +17,3 @@ tower-http.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 utils.workspace = true
-uuid.workspace = true

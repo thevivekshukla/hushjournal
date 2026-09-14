@@ -5,3 +5,9 @@ edition.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+axum.workspace = true
+axum-extra.workspace = true
+cookie.workspace = true
+db.workspace = true
+errors.workspace = true
+uuid.workspace = true

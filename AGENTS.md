@@ -15,7 +15,7 @@ backend/
   bin/e2ejournal/   # API binary; keep Axum routes in src/main.rs
   errors/           # AppError and HTTP error mapping
   db/               # pool, AppState, SQLx migrations
-  utils/            # config lives in utils/src/config.rs
+  utils/            # config, Axum session extractors
 ```
 
 - `cargo run` from `backend/` should start the API (`default-members` is `bin/e2ejournal`).
@@ -44,7 +44,7 @@ updated_at TIMESTAMPTZ
 
 - Auth is cookie sessions, not bearer tokens. Put a random session id in an HttpOnly `session` cookie; never store the raw id. SHA-256 the id and use that digest as the `PgStore` key (`session:<hex>`).
 - Attach `user_id` and other session values with `Session::attach` / `Session::remove`. After `attach` on a new session, send `Set-Cookie` via `Session::cookie(cookie_secure)` (`COOKIE_SECURE`, default false on localhost).
-- Handlers extract `Session` (optional login) or `UserId` (required login, 401 if missing) through `FromRequestParts`. Do not read the raw cookie in handlers.
+- Handlers extract `utils::Session` (optional login) or `utils::UserId` (required login, 401 if missing) through `FromRequestParts`. Do not read the raw cookie in handlers.
 
 ## Product constraints
 

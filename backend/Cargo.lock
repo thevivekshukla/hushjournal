@@ -385,8 +385,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
- "axum-extra",
- "cookie",
  "db",
  "dotenvy",
  "errors",
@@ -397,7 +395,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "utils",
- "uuid",
 ]
 
 [[package]]
@@ -1949,6 +1946,12 @@ name = "utils"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "axum",
+ "axum-extra",
+ "cookie",
+ "db",
+ "errors",
+ "uuid",
 ]
 
 [[package]]

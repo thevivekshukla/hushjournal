@@ -1,6 +1,3 @@
-#[allow(dead_code)]
-mod extract;
-
 use anyhow::Context;
 use axum::extract::State;
 use axum::http::{Method, header};
