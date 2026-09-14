@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: e2ejournal
+      POSTGRES_PASSWORD: e2ejournal
+      POSTGRES_DB: e2ejournal
+    ports:
+      - "58417:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U e2ejournal -d e2ejournal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
