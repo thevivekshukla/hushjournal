@@ -2,7 +2,9 @@
 
 End-to-end encrypted journal. The client encrypts with AES-256-GCM-SIV. The server stores ciphertext only and must never see, log, or decrypt user content.
 
-Users sign in with Google OAuth2. A user has many Spaces; a Space has many entries. An entry is `title`, `tags`, and encrypted `content`. New-entry titles default to today's date in this form: `7 Sep 2026`.
+Users sign in with Google OAuth2. A user has many Workspaces; a Workspace has one or more Shelves; a Shelf has many entries. An entry is `title`, `tags`, and encrypted `content`. New-entry titles default to today's date in this form: `7 Sep 2026`.
+
+Crypto material lives on the workspace, not the user: `key_salt` and `encrypted_dek`. The server stores these as opaque blobs and must never try to unwrap them. Shelf rows belong to a workspace (`workspace_id`); entry rows belong to a shelf (`shelf_id`).
 
 ## Backend
 
@@ -26,6 +28,7 @@ backend/
 - Image: `postgres:18` in `backend/docker-compose.yml`.
 - Do not publish host port `5432`. Use a non-default port (currently `58417:5432`) so it does not clash with other local Postgres instances.
 - Timezone is UTC: database `timezone=UTC`, `timestamptz` columns, `now()` / `CURRENT_TIMESTAMP`.
+- Primary keys are `UUID` with `DEFAULT uuidv7()` (Postgres 18). Do not use `gen_random_uuid()` or UUIDv4. Omit `id` on insert unless you have a reason to pass one.
 - Tables that need timestamps use:
 
 ```sql
