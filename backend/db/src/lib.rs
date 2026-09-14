@@ -2,6 +2,10 @@ use anyhow::Context;
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
+mod pg_store;
+
+pub use pg_store::{PgStore, pgstore_cleanup};
+
 #[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,

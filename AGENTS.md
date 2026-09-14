@@ -38,6 +38,7 @@ updated_at TIMESTAMPTZ
 
 - `updated_at` is NULL on insert. `set_updated_at()` sets it only when other columns change. After `CREATE TABLE`, attach it with `SELECT attach_updated_at_trigger('table_name');`. Do not set `updated_at` in application code.
 - Migrations live in `backend/db/migrations/` and are applied on API startup via `sqlx::migrate!()`.
+- Sessions, cookies, and other short-lived scratch data go in the UNLOGGED `kv_store` table via `db::PgStore`. Do not add Redis. Do not store journal content, `key_salt`, or `encrypted_dek` there — UNLOGGED tables skip WAL and can be lost on crash.
 
 ## Product constraints
 

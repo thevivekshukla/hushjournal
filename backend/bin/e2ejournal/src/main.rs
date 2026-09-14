@@ -27,6 +27,7 @@ async fn main() -> anyhow::Result<()> {
 
     let config = Config::from_env()?;
     let state = AppState::connect(&config.database_url).await?;
+    tokio::spawn(db::pgstore_cleanup(state.db.clone()));
 
     let listener = TcpListener::bind(config.bind_addr())
         .await
