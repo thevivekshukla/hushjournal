@@ -1,19 +1,17 @@
-mod config;
-mod error;
-mod routes;
-mod state;
-
 use anyhow::Context;
+use axum::extract::State;
 use axum::http::{Method, header};
-use sqlx::postgres::PgPoolOptions;
+use axum::routing::get;
+use axum::{Json, Router};
+use db::AppState;
+use errors::AppError;
+use serde::Serialize;
 use tokio::net::TcpListener;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-
-use crate::config::Config;
-use crate::state::AppState;
+use utils::Config;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -28,20 +26,23 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let config = Config::from_env()?;
+    let state = AppState::connect(&config.database_url).await?;
 
-    let db = PgPoolOptions::new()
-        .max_connections(10)
-        .connect(&config.database_url)
+    let listener = TcpListener::bind(config.bind_addr())
         .await
-        .context("failed to connect to postgres")?;
+        .with_context(|| format!("failed to bind {}", config.bind_addr()))?;
 
-    sqlx::migrate!()
-        .run(&db)
+    tracing::info!("listening on {}", listener.local_addr()?);
+
+    axum::serve(listener, router(state))
+        .with_graceful_shutdown(shutdown_signal())
         .await
-        .context("failed to run migrations")?;
+        .context("server error")?;
 
-    let state = AppState { db };
+    Ok(())
+}
 
+fn router(state: AppState) -> Router {
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::mirror_request())
         .allow_methods([
@@ -54,23 +55,21 @@ async fn main() -> anyhow::Result<()> {
         ])
         .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE]);
 
-    let app = routes::router()
+    Router::new()
+        .route("/health", get(health))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
-        .with_state(state);
+        .with_state(state)
+}
 
-    let listener = TcpListener::bind(config.bind_addr())
-        .await
-        .with_context(|| format!("failed to bind {}", config.bind_addr()))?;
+#[derive(Serialize)]
+struct HealthResponse {
+    status: &'static str,
+}
 
-    tracing::info!("listening on {}", listener.local_addr()?);
-
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .context("server error")?;
-
-    Ok(())
+async fn health(State(state): State<AppState>) -> Result<Json<HealthResponse>, AppError> {
+    sqlx::query("SELECT 1").execute(&state.db).await?;
+    Ok(Json(HealthResponse { status: "ok" }))
 }
 
 async fn shutdown_signal() {

@@ -9,8 +9,8 @@ pub struct Config {
 
 impl Config {
     pub fn from_env() -> Result<Self> {
-        let database_url = std::env::var("DATABASE_URL")
-            .context("DATABASE_URL must be set (see .env.example)")?;
+        let database_url =
+            std::env::var("DATABASE_URL").context("DATABASE_URL must be set (see .env.example)")?;
         let host = std::env::var("HOST").unwrap_or_else(|_| "127.0.0.1".into());
         let port = std::env::var("PORT")
             .unwrap_or_else(|_| "8000".into())
