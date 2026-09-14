@@ -7,6 +7,8 @@ use serde::Serialize;
 pub enum AppError {
     #[error("not found")]
     NotFound,
+    #[error("unauthorized")]
+    Unauthorized,
     #[error(transparent)]
     Database(sqlx::Error),
     #[error(transparent)]
@@ -31,6 +33,7 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, message) = match &self {
             AppError::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
+            AppError::Unauthorized => (StatusCode::UNAUTHORIZED, self.to_string()),
             AppError::Database(err) => {
                 tracing::error!(error = %err, "database error");
                 (

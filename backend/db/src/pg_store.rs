@@ -33,18 +33,34 @@ pub trait PgStore: Serialize + DeserializeOwned {
     }
 
     async fn get(pool: &PgPool, key: String) -> anyhow::Result<Self> {
+        Self::try_get(pool, key)
+            .await?
+            .context("failed to get value from kv_store")
+    }
+
+    async fn try_get(pool: &PgPool, key: String) -> anyhow::Result<Option<Self>> {
         let value = sqlx::query_scalar::<_, String>(
             r#"SELECT "value" FROM kv_store WHERE "key" = $1 AND expires > NOW()"#,
         )
         .bind(Self::key_format(key))
-        .fetch_one(pool)
+        .fetch_optional(pool)
         .await
         .context("failed to get value from kv_store")?;
 
-        serde_json::from_str(&value).context("failed to deserialize kv_store value")
+        value
+            .map(|value| {
+                serde_json::from_str(&value).context("failed to deserialize kv_store value")
+            })
+            .transpose()
     }
 
     async fn get_ex(pool: &PgPool, key: String) -> anyhow::Result<Self> {
+        Self::try_get_ex(pool, key)
+            .await?
+            .context("failed to get value from kv_store")
+    }
+
+    async fn try_get_ex(pool: &PgPool, key: String) -> anyhow::Result<Option<Self>> {
         let value = sqlx::query_scalar::<_, String>(
             r#"UPDATE kv_store SET expires = $2
             WHERE "key" = $1 AND expires > NOW()
@@ -52,11 +68,15 @@ pub trait PgStore: Serialize + DeserializeOwned {
         )
         .bind(Self::key_format(key))
         .bind(Self::get_expire_time())
-        .fetch_one(pool)
+        .fetch_optional(pool)
         .await
         .context("failed to get value from kv_store")?;
 
-        serde_json::from_str(&value).context("failed to deserialize kv_store value")
+        value
+            .map(|value| {
+                serde_json::from_str(&value).context("failed to deserialize kv_store value")
+            })
+            .transpose()
     }
 
     async fn get_del(pool: &PgPool, key: String) -> anyhow::Result<Self> {

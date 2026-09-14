@@ -5,6 +5,7 @@ pub struct Config {
     pub database_url: String,
     pub host: String,
     pub port: u16,
+    pub cookie_secure: bool,
 }
 
 impl Config {
@@ -16,11 +17,15 @@ impl Config {
             .unwrap_or_else(|_| "8000".into())
             .parse()
             .context("PORT must be a valid u16")?;
+        let cookie_secure = std::env::var("COOKIE_SECURE")
+            .map(|value| value == "true" || value == "1")
+            .unwrap_or(false);
 
         Ok(Self {
             database_url,
             host,
             port,
+            cookie_secure,
         })
     }
 

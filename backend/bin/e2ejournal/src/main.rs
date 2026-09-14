@@ -1,3 +1,6 @@
+#[allow(dead_code)]
+mod extract;
+
 use anyhow::Context;
 use axum::extract::State;
 use axum::http::{Method, header};
@@ -26,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let config = Config::from_env()?;
-    let state = AppState::connect(&config.database_url).await?;
+    let state = AppState::connect(&config.database_url, config.cookie_secure).await?;
     tokio::spawn(db::pgstore_cleanup(state.db.clone()));
 
     let listener = TcpListener::bind(config.bind_addr())

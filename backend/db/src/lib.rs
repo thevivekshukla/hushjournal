@@ -3,16 +3,19 @@ use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
 mod pg_store;
+mod session;
 
 pub use pg_store::{PgStore, pgstore_cleanup};
+pub use session::{SESSION_COOKIE, Session};
 
 #[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,
+    pub cookie_secure: bool,
 }
 
 impl AppState {
-    pub async fn connect(database_url: &str) -> anyhow::Result<Self> {
+    pub async fn connect(database_url: &str, cookie_secure: bool) -> anyhow::Result<Self> {
         let db = PgPoolOptions::new()
             .max_connections(10)
             .connect(database_url)
@@ -24,6 +27,6 @@ impl AppState {
             .await
             .context("failed to run migrations")?;
 
-        Ok(Self { db })
+        Ok(Self { db, cookie_secure })
     }
 }

@@ -40,6 +40,12 @@ updated_at TIMESTAMPTZ
 - Migrations live in `backend/db/migrations/` and are applied on API startup via `sqlx::migrate!()`.
 - Sessions, cookies, and other short-lived scratch data go in the UNLOGGED `kv_store` table via `db::PgStore`. Do not add Redis. Do not store journal content, `key_salt`, or `encrypted_dek` there — UNLOGGED tables skip WAL and can be lost on crash.
 
+## Sessions
+
+- Auth is cookie sessions, not bearer tokens. Put a random session id in an HttpOnly `session` cookie; never store the raw id. SHA-256 the id and use that digest as the `PgStore` key (`session:<hex>`).
+- Attach `user_id` and other session values with `Session::attach` / `Session::remove`. After `attach` on a new session, send `Set-Cookie` via `Session::cookie(cookie_secure)` (`COOKIE_SECURE`, default false on localhost).
+- Handlers extract `Session` (optional login) or `UserId` (required login, 401 if missing) through `FromRequestParts`. Do not read the raw cookie in handlers.
+
 ## Product constraints
 
 - Never add server-side encryption, decryption, or plaintext indexing of entry content.
