@@ -4,6 +4,7 @@ CREATE TABLE shelves (
     name BYTEA NOT NULL,
     icon TEXT,
     total_shelf_size BIGINT NOT NULL DEFAULT 0,
+    size_last_calculated_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ
 );
