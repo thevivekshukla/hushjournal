@@ -37,6 +37,9 @@ updated_at TIMESTAMPTZ
 ```
 
 - `updated_at` is NULL on insert. `set_updated_at()` sets it only when other columns change. After `CREATE TABLE`, attach it with `SELECT attach_updated_at_trigger('table_name');`. Do not set `updated_at` in application code.
+- `entries.total_size` is `BIGINT NOT NULL DEFAULT 0` and is set by `set_entry_total_size` on INSERT/UPDATE to `octet_length(title) + octet_length(content)`. Do not set it in application code.
+- `shelves.total_shelf_size` is `BIGINT NOT NULL DEFAULT 0`. It is maintained by application cron (sum of entry `total_size` in that shelf), not by a trigger.
+- Max 20 workspaces per user (`workspaces_max_per_user`) and 100 shelves per workspace (`shelves_max_per_workspace`). Enforced by BEFORE INSERT/UPDATE triggers; CHECK cannot see other rows.
 - Migrations live in `backend/db/migrations/` and are applied on API startup via `sqlx::migrate!()`.
 - Sessions, cookies, and other short-lived scratch data go in the UNLOGGED `kv_store` table via `db::PgStore`. Do not add Redis. Do not store journal content, `key_salt`, or `encrypted_dek` there — UNLOGGED tables skip WAL and can be lost on crash.
 
