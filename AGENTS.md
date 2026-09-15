@@ -26,7 +26,7 @@ backend/
 - Write SQLx queries in-place at the call site. Do not abstract SQL into shared consts, macros, or concatenated column lists. If a query is too long for a normal editor width, break it across multiple lines in a raw string (`r#"..."#`). Keep short queries on one line.
 - Always use the type-checked SQLx macros (`query!`, `query_as!`, `query_scalar!`). Do not use `sqlx::query()`, `query_as()`, or `query_scalar()`. After adding or changing queries, run `cargo sqlx prepare --workspace` from `backend/` against a migrated database and commit the `.sqlx` cache.
 - Default API bind: `127.0.0.1:8000` (`HOST` / `PORT`). Do not change the default port to 3000.
-- `GOOGLE_LOGIN_OAUTH2` is required: `client_id,client_secret` (comma-separated, first comma splits). Optional `GOOGLE_OAUTH_REDIRECT_URI` defaults to `{http|https}://{host}:{port}/api/auth/google/callback` (`https` when `COOKIE_SECURE` is true; `0.0.0.0`/`::` become `127.0.0.1`).
+- `GOOGLE_LOGIN_OAUTH2` is required: `client_id,client_secret` (comma-separated, first comma splits). `GOOGLE_OAUTH_REDIRECT_URI` is required and must match the Google Cloud OAuth client redirect URI (for local: `http://127.0.0.1:8000/api/auth/google/callback`).
 - Google OAuth is the authorization-code flow. Start at `GET /api/auth/google` (optional `next` query, relative path only), callback at `GET /api/auth/google/callback`. Never log OAuth codes, tokens, or client secrets.
 
 ## Postgres

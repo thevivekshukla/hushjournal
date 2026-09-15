@@ -26,15 +26,8 @@ impl Config {
             &std::env::var("GOOGLE_LOGIN_OAUTH2")
                 .context("GOOGLE_LOGIN_OAUTH2 must be set (client_id,client_secret)")?,
         )?;
-        let google_redirect_uri = std::env::var("GOOGLE_OAUTH_REDIRECT_URI").unwrap_or_else(|_| {
-            let public_host = if host == "0.0.0.0" || host == "::" {
-                "127.0.0.1"
-            } else {
-                host.as_str()
-            };
-            let scheme = if cookie_secure { "https" } else { "http" };
-            format!("{scheme}://{public_host}:{port}/api/auth/google/callback")
-        });
+        let google_redirect_uri = std::env::var("GOOGLE_OAUTH_REDIRECT_URI")
+            .context("GOOGLE_OAUTH_REDIRECT_URI must be set (see .env.example)")?;
 
         Ok(Self {
             database_url,
