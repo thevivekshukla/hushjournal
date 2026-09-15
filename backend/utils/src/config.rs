@@ -33,7 +33,7 @@ impl Config {
                 host.as_str()
             };
             let scheme = if cookie_secure { "https" } else { "http" };
-            format!("{scheme}://{public_host}:{port}/auth/google/callback")
+            format!("{scheme}://{public_host}:{port}/api/auth/google/callback")
         });
 
         Ok(Self {

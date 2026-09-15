@@ -22,12 +22,12 @@ backend/
 
 - `cargo run` from `backend/` should start the API (`default-members` is `bin/e2ejournal`).
 - Shared outbound HTTP uses `utils::reqwest_client()` (a process-wide `reqwest::Client`). Do not create additional reqwest clients.
-- Domain DB access lives in entity crates (`user`). REST handlers for those entities live in `*_json` crates and are `.merge`d from `bin/e2ejournal/src/main.rs`. Keep `/health` and server wiring in `main.rs`.
+- Domain DB access lives in entity crates (`user`). REST handlers for those entities live in `*_json` crates and are `.nest("/api", ...)` from `bin/e2ejournal/src/main.rs`. `*_json` routers must not include the `/api` prefix themselves. Keep `/health` and server wiring in `main.rs` (health stays outside `/api`).
 - Write SQLx queries in-place at the call site. Do not abstract SQL into shared consts, macros, or concatenated column lists. If a query is too long for a normal editor width, break it across multiple lines in a raw string (`r#"..."#`). Keep short queries on one line.
 - Always use the type-checked SQLx macros (`query!`, `query_as!`, `query_scalar!`). Do not use `sqlx::query()`, `query_as()`, or `query_scalar()`. After adding or changing queries, run `cargo sqlx prepare --workspace` from `backend/` against a migrated database and commit the `.sqlx` cache.
 - Default API bind: `127.0.0.1:8000` (`HOST` / `PORT`). Do not change the default port to 3000.
-- `GOOGLE_LOGIN_OAUTH2` is required: `client_id,client_secret` (comma-separated, first comma splits). Optional `GOOGLE_OAUTH_REDIRECT_URI` defaults to `{http|https}://{host}:{port}/auth/google/callback` (`https` when `COOKIE_SECURE` is true; `0.0.0.0`/`::` become `127.0.0.1`).
-- Google OAuth is the authorization-code flow. Start at `GET /auth/google` (optional `next` query, relative path only), callback at `GET /auth/google/callback`. Never log OAuth codes, tokens, or client secrets.
+- `GOOGLE_LOGIN_OAUTH2` is required: `client_id,client_secret` (comma-separated, first comma splits). Optional `GOOGLE_OAUTH_REDIRECT_URI` defaults to `{http|https}://{host}:{port}/api/auth/google/callback` (`https` when `COOKIE_SECURE` is true; `0.0.0.0`/`::` become `127.0.0.1`).
+- Google OAuth is the authorization-code flow. Start at `GET /api/auth/google` (optional `next` query, relative path only), callback at `GET /api/auth/google/callback`. Never log OAuth codes, tokens, or client secrets.
 
 ## Postgres
 
@@ -55,7 +55,7 @@ updated_at TIMESTAMPTZ
 - Auth is cookie sessions, not bearer tokens. Put a random session id in an HttpOnly `session` cookie; never store the raw id. SHA-256 the id and use that digest as the `PgStore` key (`session:<hex>`).
 - Attach `user_id` and other session values with `Session::attach` / `Session::remove`. After `attach` on a new session, send `Set-Cookie` via `Session::cookie(cookie_secure)` (`COOKIE_SECURE`, default false on localhost). On logout / account delete, destroy the session and send `Session::removal_cookie(cookie_secure)`.
 - Handlers extract `utils::Session` (optional login) or `utils::UserId` (required login, 401 if missing) through `FromRequestParts`. Do not read the raw cookie in handlers.
-- Google login upserts by `google_account_id` (create if missing, update `google_email` / `google_avatar_url` / `last_login_at` on repeat login). Do not overwrite a user-edited `name` on subsequent Google logins. Inactive users (`is_active = false`) must not be signed in. `DELETE /user` deletes the `users` row (workspaces/shelves/entries cascade). Profile edit (`PATCH /user`) may change `name` only for now.
+- Google login upserts by `google_account_id` (create if missing, update `google_email` / `google_avatar_url` / `last_login_at` on repeat login). Do not overwrite a user-edited `name` on subsequent Google logins. Inactive users (`is_active = false`) must not be signed in. `DELETE /api/user` deletes the `users` row (workspaces/shelves/entries cascade). Profile edit (`PATCH /api/user`) may change `name` only for now.
 
 ## Product constraints
 
