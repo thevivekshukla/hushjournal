@@ -1,14 +1,17 @@
 [package]
-name = "utils"
+name = "user_json"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
-anyhow.workspace = true
 axum.workspace = true
 axum-extra.workspace = true
-cookie.workspace = true
 db.workspace = true
 errors.workspace = true
+hex.workspace = true
+rand.workspace = true
 reqwest.workspace = true
-uuid.workspace = true
+serde.workspace = true
+tracing.workspace = true
+user.workspace = true
+utils.workspace = true

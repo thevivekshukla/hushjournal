@@ -1,5 +1,5 @@
 [workspace]
-members = ["bin/e2ejournal", "db", "errors", "utils"]
+members = ["bin/e2ejournal", "db", "errors", "user", "user_json", "utils"]
 default-members = ["bin/e2ejournal"]
 resolver = "3"
 
@@ -18,6 +18,7 @@ dotenvy = "0.15.7"
 errors = { path = "errors" }
 hex = "0.4"
 rand = "0.9"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls-webpki-roots"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 sha2 = "0.10"
@@ -27,5 +28,7 @@ tokio = { version = "1.53.1", features = ["full"] }
 tower-http = { version = "0.7.1", features = ["trace", "cors"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+user = { path = "user" }
+user_json = { path = "user_json" }
 utils = { path = "utils" }
 uuid = { version = "1.26.1", features = ["serde", "v7"] }

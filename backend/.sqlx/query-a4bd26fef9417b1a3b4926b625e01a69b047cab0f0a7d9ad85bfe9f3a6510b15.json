@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM kv_store WHERE \"key\" = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a4bd26fef9417b1a3b4926b625e01a69b047cab0f0a7d9ad85bfe9f3a6510b15"
+}

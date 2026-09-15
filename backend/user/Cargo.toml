@@ -1,0 +1,11 @@
+[package]
+name = "user"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+chrono.workspace = true
+errors.workspace = true
+serde.workspace = true
+sqlx.workspace = true
+uuid.workspace = true

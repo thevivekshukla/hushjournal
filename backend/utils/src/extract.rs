@@ -23,11 +23,12 @@ impl Session {
             .build()
     }
 
-    pub fn removal_cookie() -> Cookie<'static> {
+    pub fn removal_cookie(secure: bool) -> Cookie<'static> {
         Cookie::build((db::SESSION_COOKIE, ""))
             .http_only(true)
             .path("/")
             .same_site(SameSite::Lax)
+            .secure(secure)
             .max_age(CookieDuration::ZERO)
             .build()
     }

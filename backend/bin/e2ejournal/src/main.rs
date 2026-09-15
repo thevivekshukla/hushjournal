@@ -26,7 +26,12 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let config = Config::from_env()?;
-    let state = AppState::connect(&config.database_url, config.cookie_secure).await?;
+    let state = AppState::connect(
+        &config.database_url,
+        config.cookie_secure,
+        config.google_oauth.clone(),
+    )
+    .await?;
     tokio::spawn(db::pgstore_cleanup(state.db.clone()));
 
     let listener = TcpListener::bind(config.bind_addr())
@@ -54,10 +59,12 @@ fn router(state: AppState) -> Router {
             Method::DELETE,
             Method::OPTIONS,
         ])
-        .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE]);
+        .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE])
+        .allow_credentials(true);
 
     Router::new()
         .route("/health", get(health))
+        .merge(user_json::router())
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(state)
@@ -69,7 +76,7 @@ struct HealthResponse {
 }
 
 async fn health(State(state): State<AppState>) -> Result<Json<HealthResponse>, AppError> {
-    sqlx::query("SELECT 1").execute(&state.db).await?;
+    sqlx::query_scalar!("SELECT 1").fetch_one(&state.db).await?;
     Ok(Json(HealthResponse { status: "ok" }))
 }
 

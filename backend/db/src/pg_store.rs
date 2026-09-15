@@ -18,13 +18,17 @@ pub trait PgStore: Serialize + DeserializeOwned {
     async fn set_ex(&self, pool: &PgPool, key: String) -> anyhow::Result<()> {
         let value = serde_json::to_string(self).context("failed to serialize kv_store value")?;
 
-        sqlx::query(
-            r#"INSERT INTO kv_store ("key", "value", expires) VALUES ($1, $2, $3)
-            ON CONFLICT ("key") DO UPDATE SET "value" = EXCLUDED.value, expires = EXCLUDED.expires"#,
+        sqlx::query!(
+            r#"
+                INSERT INTO kv_store ("key", "value", expires)
+                VALUES ($1, $2, $3)
+                ON CONFLICT ("key") DO UPDATE
+                SET "value" = EXCLUDED.value, expires = EXCLUDED.expires
+            "#,
+            Self::key_format(key),
+            value,
+            Self::get_expire_time(),
         )
-        .bind(Self::key_format(key))
-        .bind(value)
-        .bind(Self::get_expire_time())
         .execute(pool)
         .await
         .context("failed to set value in kv_store")?;
@@ -39,10 +43,14 @@ pub trait PgStore: Serialize + DeserializeOwned {
     }
 
     async fn try_get(pool: &PgPool, key: String) -> anyhow::Result<Option<Self>> {
-        let value = sqlx::query_scalar::<_, String>(
-            r#"SELECT "value" FROM kv_store WHERE "key" = $1 AND expires > NOW()"#,
+        let value = sqlx::query_scalar!(
+            r#"
+                SELECT "value"
+                FROM kv_store
+                WHERE "key" = $1 AND expires > NOW()
+            "#,
+            Self::key_format(key),
         )
-        .bind(Self::key_format(key))
         .fetch_optional(pool)
         .await
         .context("failed to get value from kv_store")?;
@@ -61,13 +69,13 @@ pub trait PgStore: Serialize + DeserializeOwned {
     }
 
     async fn try_get_ex(pool: &PgPool, key: String) -> anyhow::Result<Option<Self>> {
-        let value = sqlx::query_scalar::<_, String>(
+        let value = sqlx::query_scalar!(
             r#"UPDATE kv_store SET expires = $2
             WHERE "key" = $1 AND expires > NOW()
             RETURNING "value""#,
+            Self::key_format(key),
+            Self::get_expire_time(),
         )
-        .bind(Self::key_format(key))
-        .bind(Self::get_expire_time())
         .fetch_optional(pool)
         .await
         .context("failed to get value from kv_store")?;
@@ -80,10 +88,14 @@ pub trait PgStore: Serialize + DeserializeOwned {
     }
 
     async fn get_del(pool: &PgPool, key: String) -> anyhow::Result<Self> {
-        let value = sqlx::query_scalar::<_, String>(
-            r#"DELETE FROM kv_store WHERE "key" = $1 AND expires > NOW() RETURNING "value""#,
+        let value = sqlx::query_scalar!(
+            r#"
+                DELETE FROM kv_store
+                WHERE "key" = $1 AND expires > NOW()
+                RETURNING "value"
+            "#,
+            Self::key_format(key),
         )
-        .bind(Self::key_format(key))
         .fetch_one(pool)
         .await
         .context("failed to get value from kv_store")?;
@@ -92,11 +104,13 @@ pub trait PgStore: Serialize + DeserializeOwned {
     }
 
     async fn del(pool: &PgPool, key: String) -> anyhow::Result<()> {
-        sqlx::query(r#"DELETE FROM kv_store WHERE "key" = $1"#)
-            .bind(Self::key_format(key))
-            .execute(pool)
-            .await
-            .context("failed to delete value from kv_store")?;
+        sqlx::query!(
+            r#"DELETE FROM kv_store WHERE "key" = $1"#,
+            Self::key_format(key),
+        )
+        .execute(pool)
+        .await
+        .context("failed to delete value from kv_store")?;
 
         Ok(())
     }
@@ -104,7 +118,7 @@ pub trait PgStore: Serialize + DeserializeOwned {
 
 pub async fn pgstore_cleanup(pool: PgPool) {
     loop {
-        if let Err(err) = sqlx::query(r#"DELETE FROM kv_store WHERE expires < NOW()"#)
+        if let Err(err) = sqlx::query!(r#"DELETE FROM kv_store WHERE expires < NOW()"#)
             .execute(&pool)
             .await
         {
