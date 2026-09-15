@@ -2,9 +2,9 @@
 
 End-to-end encrypted journal. The client encrypts with AES-256-GCM-SIV. The server stores ciphertext only and must never see, log, or decrypt user content.
 
-Users sign in with Google OAuth2. A user has many Workspaces; a Workspace has one or more Shelves; a Shelf has many entries. An entry is `title`, `tags`, and encrypted `content`. New-entry titles default to today's date in this form: `7 Sep 2026`.
+Users sign in with Google OAuth2. A user has many Workspaces; a Workspace has one or more Shelves; a Shelf has many entries. An entry is encrypted `title` and encrypted `content`. New-entry titles default to today's date in this form: `7 Sep 2026` (set and encrypted on the client). Shelf `name` is also ciphertext.
 
-Crypto material lives on the workspace, not the user: `key_salt` and `encrypted_dek`. The server stores these as opaque blobs and must never try to unwrap them. Shelf rows belong to a workspace (`workspace_id`); entry rows belong to a shelf (`shelf_id`).
+Crypto material lives on the workspace, not the user: `key_salt` and `encrypted_dek`. The server stores these as opaque blobs and must never try to unwrap them. Shelf rows belong to a workspace (`workspace_id`); entry rows belong to a shelf (`shelf_id`). Do not store plaintext for `workspaces.key_salt`, `workspaces.encrypted_dek`, `shelves.name`, `entries.title`, or `entries.content`.
 
 ## Backend
 
@@ -48,5 +48,6 @@ updated_at TIMESTAMPTZ
 
 ## Product constraints
 
-- Never add server-side encryption, decryption, or plaintext indexing of entry content.
+- Never add server-side encryption, decryption, or plaintext indexing of shelf names, entry titles, or entry content.
 - Prefer storing encrypted blobs as the client sent them.
+- Ciphertext size limits (`octet_length`): shelf `name` 256 bytes, entry `title` 1 KiB, entry `content` 5 MiB.
