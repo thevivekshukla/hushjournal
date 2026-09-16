@@ -292,13 +292,6 @@ class Journal {
 	}
 
 	async createEntry(shelfId: string, title = formatEntryDate()) {
-		const existing = this.entries.find(
-			(entry) => entry.shelfId === shelfId && entry.title === title
-		);
-		if (existing) {
-			await this.ensureContent(existing.id);
-			return existing;
-		}
 		const dek = session.requireDek();
 		const row = await api.createEntry(shelfId, {
 			title: bytesToBase64(encryptText(dek, title, 'entry.title')),
