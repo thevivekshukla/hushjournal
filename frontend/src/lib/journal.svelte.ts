@@ -21,11 +21,21 @@ export type Entry = {
 
 export const SHELF_ICONS = [
 	'icon-[lucide--book-open]',
+	'icon-[lucide--notebook]',
+	'icon-[lucide--pen-line]',
+	'icon-[lucide--calendar]',
 	'icon-[lucide--lightbulb]',
+	'icon-[lucide--bookmark]',
+	'icon-[lucide--star]',
+	'icon-[lucide--heart]',
+	'icon-[lucide--folder]',
+	'icon-[lucide--briefcase]',
 	'icon-[lucide--map]',
+	'icon-[lucide--camera]',
+	'icon-[lucide--music]',
 	'icon-[lucide--coffee]',
 	'icon-[lucide--leaf]',
-	'icon-[lucide--pen-line]'
+	'icon-[lucide--sparkles]'
 ] as const;
 
 const STORAGE_KEY = 'e2ejournal.journal';
