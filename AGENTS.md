@@ -18,11 +18,14 @@ backend/
   utils/            # config, Axum session extractors, shared reqwest client
   user/             # user row types and Postgres queries
   user_json/        # Axum JSON handlers / router for user and auth APIs
+  workspace/        # workspace, shelf, and entry row types and Postgres queries
+  workspace_json/   # Axum JSON handlers / router for workspaces, shelves, and entries
 ```
 
 - `cargo run` from `backend/` should start the API (`default-members` is `bin/e2ejournal`).
 - Shared outbound HTTP uses `utils::reqwest_client()` (a process-wide `reqwest::Client`). Do not create additional reqwest clients.
-- Domain DB access lives in entity crates (`user`). REST handlers for those entities live in `*_json` crates and are `.nest("/api", ...)` from `bin/e2ejournal/src/main.rs`. `*_json` routers must not include the `/api` prefix themselves. Keep `/health` and server wiring in `main.rs` (health stays outside `/api`).
+- Domain DB access lives in entity crates (`user`, `workspace`). `workspace` covers workspaces, shelves, and entries together. REST handlers for those entities live in `*_json` crates and are `.nest("/api", ...)` from `bin/e2ejournal/src/main.rs`. `*_json` routers must not include the `/api` prefix themselves. Keep `/health` and server wiring in `main.rs` (health stays outside `/api`).
+- Journal REST: `/workspaces`, `/workspaces/{id}/shelves`, `/shelves/{id}/entries` for collections; `/workspaces/{id}`, `/shelves/{id}`, `/entries/{id}` for a single row. All require a session. BYTEA ciphertext is JSON standard-base64. List entries omit `content`; `GET /entries/{id}` returns the body. Do not log ciphertext.
 - Write SQLx queries in-place at the call site. Do not abstract SQL into shared consts, macros, or concatenated column lists. If a query is too long for a normal editor width, break it across multiple lines in a raw string (`r#"..."#`). Keep short queries on one line.
 - Always use the type-checked SQLx macros (`query!`, `query_as!`, `query_scalar!`). Do not use `sqlx::query()`, `query_as()`, or `query_scalar()`. After adding or changing queries, run `cargo sqlx prepare --workspace` from `backend/` against a migrated database and commit the `.sqlx` cache.
 - Default API bind: `127.0.0.1:8000` (`HOST` / `PORT`). Do not change the default port to 3000.

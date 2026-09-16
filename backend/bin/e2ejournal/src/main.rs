@@ -64,7 +64,7 @@ fn router(state: AppState) -> Router {
 
     Router::new()
         .route("/health", get(health))
-        .nest("/api", user_json::router())
+        .nest("/api", user_json::router().merge(workspace_json::router()))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(state)

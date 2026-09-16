@@ -1,5 +1,14 @@
 [workspace]
-members = ["bin/e2ejournal", "db", "errors", "user", "user_json", "utils"]
+members = [
+    "bin/e2ejournal",
+    "db",
+    "errors",
+    "user",
+    "user_json",
+    "utils",
+    "workspace",
+    "workspace_json",
+]
 default-members = ["bin/e2ejournal"]
 resolver = "3"
 
@@ -11,6 +20,7 @@ edition = "2024"
 anyhow = "1.0.104"
 axum = "0.8.9"
 axum-extra = { version = "0.12", features = ["cookie"] }
+base64 = "0.22"
 chrono = { version = "0.4.45", features = ["serde"] }
 cookie = "0.18"
 db = { path = "db" }
@@ -31,4 +41,6 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 user = { path = "user" }
 user_json = { path = "user_json" }
 utils = { path = "utils" }
+workspace = { path = "workspace" }
+workspace_json = { path = "workspace_json" }
 uuid = { version = "1.26.1", features = ["serde", "v7"] }

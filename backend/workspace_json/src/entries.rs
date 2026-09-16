@@ -1,0 +1,92 @@
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use axum::routing::get;
+use axum::{Json, Router};
+use db::AppState;
+use errors::AppError;
+use serde::Deserialize;
+use utils::UserId;
+use uuid::Uuid;
+use workspace::entries::{self, Entry, EntrySummary};
+
+pub fn router() -> Router<AppState> {
+    Router::new()
+        .route("/shelves/{shelf_id}/entries", get(list).post(create))
+        .route("/entries/{id}", get(get_one).patch(update).delete(delete))
+}
+
+#[derive(Deserialize)]
+struct CreateEntry {
+    #[serde(with = "workspace::b64")]
+    title: Vec<u8>,
+    #[serde(with = "workspace::b64")]
+    content: Vec<u8>,
+}
+
+#[derive(Deserialize)]
+struct UpdateEntry {
+    #[serde(default, deserialize_with = "workspace::b64_opt::deserialize")]
+    title: Option<Vec<u8>>,
+    #[serde(default, deserialize_with = "workspace::b64_opt::deserialize")]
+    content: Option<Vec<u8>>,
+}
+
+async fn list(
+    State(state): State<AppState>,
+    UserId(user_id): UserId,
+    Path(shelf_id): Path<Uuid>,
+) -> Result<Json<Vec<EntrySummary>>, AppError> {
+    Ok(Json(entries::list(&state.db, user_id, shelf_id).await?))
+}
+
+async fn get_one(
+    State(state): State<AppState>,
+    UserId(user_id): UserId,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Entry>, AppError> {
+    Ok(Json(entries::get(&state.db, user_id, id).await?))
+}
+
+async fn create(
+    State(state): State<AppState>,
+    UserId(user_id): UserId,
+    Path(shelf_id): Path<Uuid>,
+    Json(body): Json<CreateEntry>,
+) -> Result<(StatusCode, Json<Entry>), AppError> {
+    let entry = entries::create(&state.db, user_id, shelf_id, &body.title, &body.content).await?;
+    tracing::info!(
+        entry_id = %entry.id,
+        shelf_id = %shelf_id,
+        user_id = %user_id,
+        "entry created"
+    );
+    Ok((StatusCode::CREATED, Json(entry)))
+}
+
+async fn update(
+    State(state): State<AppState>,
+    UserId(user_id): UserId,
+    Path(id): Path<Uuid>,
+    Json(body): Json<UpdateEntry>,
+) -> Result<Json<Entry>, AppError> {
+    Ok(Json(
+        entries::update(
+            &state.db,
+            user_id,
+            id,
+            body.title.as_deref(),
+            body.content.as_deref(),
+        )
+        .await?,
+    ))
+}
+
+async fn delete(
+    State(state): State<AppState>,
+    UserId(user_id): UserId,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, AppError> {
+    entries::delete(&state.db, user_id, id).await?;
+    tracing::info!(entry_id = %id, user_id = %user_id, "entry deleted");
+    Ok(StatusCode::NO_CONTENT)
+}

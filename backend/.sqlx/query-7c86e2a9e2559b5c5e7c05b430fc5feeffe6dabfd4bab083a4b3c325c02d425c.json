@@ -1,0 +1,116 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE shelves s\n            SET name = COALESCE($3, s.name),\n                icon = CASE WHEN $4 THEN $5 ELSE s.icon END\n            FROM workspaces w\n            WHERE s.id = $1 AND s.workspace_id = w.id AND w.user_id = $2\n            RETURNING s.id, s.workspace_id, s.name, s.icon, s.total_shelf_size,\n                s.size_last_calculated_at, s.created_at, s.updated_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "shelves",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "workspace_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "shelves",
+            "name": "workspace_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "shelves",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "icon",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "shelves",
+            "name": "icon"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "total_shelf_size",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "shelves",
+            "name": "total_shelf_size"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "size_last_calculated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "shelves",
+            "name": "size_last_calculated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "shelves",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "shelves",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bytea",
+        "Bool",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "7c86e2a9e2559b5c5e7c05b430fc5feeffe6dabfd4bab083a4b3c325c02d425c"
+}

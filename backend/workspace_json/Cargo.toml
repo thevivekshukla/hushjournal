@@ -1,0 +1,14 @@
+[package]
+name = "workspace_json"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+axum.workspace = true
+db.workspace = true
+errors.workspace = true
+serde.workspace = true
+tracing.workspace = true
+utils.workspace = true
+uuid.workspace = true
+workspace.workspace = true
