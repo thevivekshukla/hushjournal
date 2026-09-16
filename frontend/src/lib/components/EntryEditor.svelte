@@ -14,6 +14,15 @@
 					: 'Saved'
 	);
 
+	const stats = $derived.by(() => {
+		const content = entry.content;
+		return {
+			words: content.trim() === '' ? 0 : content.trim().split(/\s+/).length,
+			chars: content.length,
+			lines: content === '' ? 0 : content.split('\n').length
+		};
+	});
+
 	function updateTitle(event: Event) {
 		const title = (event.currentTarget as HTMLInputElement).value;
 		journal.updateEntry(entry.id, { title });
@@ -47,10 +56,23 @@
 	<textarea
 		id="entry-content"
 		name="content"
-		class="journal-body min-h-0 w-full flex-1 resize-none border-0 bg-transparent px-4 pt-2 pb-16 font-serif text-lg leading-8 outline-none md:px-10"
+		class="journal-body min-h-0! w-full flex-1 resize-none border-0 bg-transparent px-4 pt-2 pb-4 font-serif text-lg leading-8 outline-none md:px-10"
 		value={entry.content}
 		oninput={updateContent}
 		placeholder="Start writing…"
 		aria-label="Entry content"
 		disabled={!entry.contentLoaded}></textarea>
+	<p
+		class="shrink-0 px-4 py-2 text-xs tracking-wide text-base-content/50 tabular-nums md:px-10"
+		aria-live="polite"
+	>
+		{stats.words}
+		{stats.words === 1 ? 'word' : 'words'}
+		<span aria-hidden="true"> · </span>
+		{stats.chars}
+		{stats.chars === 1 ? 'char' : 'chars'}
+		<span aria-hidden="true"> · </span>
+		{stats.lines}
+		{stats.lines === 1 ? 'line' : 'lines'}
+	</p>
 </div>

@@ -84,6 +84,10 @@
 		if (selectedShelf) void journal.loadEntries(selectedShelf.id);
 	}
 
+	function toggleEntryOrder() {
+		setEntryOrder(journal.entryOrder === 'desc' ? 'asc' : 'desc');
+	}
+
 	async function loadMore() {
 		if (!selectedShelf) return;
 		try {
@@ -341,30 +345,30 @@
 							</button>
 						{/if}
 					</div>
-					<button
-						type="button"
-						class="btn shrink-0 rounded-full btn-neutral btn-sm"
-						onclick={() => void writeToday()}
-						disabled={!selectedShelf || busy}
-					>
-						<span class="icon-[lucide--plus] size-4"></span>
-						Note
-					</button>
+					<div class="flex shrink-0 items-center gap-1">
+						<button
+							type="button"
+							class="btn btn-circle shrink-0 btn-ghost btn-sm"
+							aria-label={journal.entryOrder === 'desc' ? 'Sort descending' : 'Sort ascending'}
+							onclick={toggleEntryOrder}
+						>
+							{#if journal.entryOrder === 'desc'}
+								<span class="icon-[lucide--arrow-down-wide-narrow] size-4"></span>
+							{:else}
+								<span class="icon-[lucide--arrow-up-narrow-wide] size-4"></span>
+							{/if}
+						</button>
+						<button
+							type="button"
+							class="btn shrink-0 rounded-full btn-neutral btn-sm"
+							onclick={() => void writeToday()}
+							disabled={!selectedShelf || busy}
+						>
+							<span class="icon-[lucide--plus] size-4"></span>
+							Note
+						</button>
+					</div>
 				</div>
-				<label class="flex items-center gap-2 px-3 pb-2" for="entry-order">
-					<span class="text-xs tracking-wide text-base-content/50 uppercase">Sort</span>
-					<select
-						id="entry-order"
-						name="order"
-						class="select min-h-8 w-full select-sm"
-						value={journal.entryOrder}
-						onchange={(event) =>
-							setEntryOrder(event.currentTarget.value === 'asc' ? 'asc' : 'desc')}
-					>
-						<option value="desc">DESC</option>
-						<option value="asc">ASC</option>
-					</select>
-				</label>
 				<div class="flex-1 scrollbar-thin overflow-y-auto px-2 pb-4">
 					{#each entries as entry (entry.id)}
 						<button
