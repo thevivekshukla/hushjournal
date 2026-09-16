@@ -1,6 +1,20 @@
+import * as api from '$lib/api';
+import {
+	base64ToBytes,
+	bytesToBase64,
+	createWorkspaceSecrets,
+	CryptoError,
+	decryptText,
+	encryptText,
+	unlockDek
+} from '$lib/crypto';
+import { session } from '$lib/session.svelte';
+
 export type Workspace = {
 	id: string;
 	name: string;
+	keySalt: string;
+	encryptedDek: string;
 };
 
 export type Shelf = {
@@ -10,11 +24,15 @@ export type Shelf = {
 	icon: string;
 };
 
+export type SaveStatus = 'saved' | 'saving' | 'error';
+
 export type Entry = {
 	id: string;
 	shelfId: string;
 	title: string;
 	content: string;
+	contentLoaded: boolean;
+	saveStatus: SaveStatus;
 	createdAt: string;
 	updatedAt: string | null;
 };
@@ -38,118 +56,84 @@ export const SHELF_ICONS = [
 	'icon-[lucide--sparkles]'
 ] as const;
 
-const STORAGE_KEY = 'e2ejournal.journal';
-
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const SAVE_DELAY_MS = 500;
 
 export function formatEntryDate(date = new Date()) {
 	return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 }
 
-function nowIso() {
-	return new Date().toISOString();
+function shelfIcon(icon: string | null): string {
+	return icon && (SHELF_ICONS as readonly string[]).includes(icon) ? icon : SHELF_ICONS[0];
 }
 
-function seed(): { workspaces: Workspace[]; shelves: Shelf[]; entries: Entry[] } {
+function mapWorkspace(row: api.ApiWorkspace): Workspace {
 	return {
-		workspaces: [
-			{ id: 'ws-personal', name: 'Personal' },
-			{ id: 'ws-work', name: 'Work' }
-		],
-		shelves: [
-			{
-				id: 'shelf-journal',
-				workspaceId: 'ws-personal',
-				name: 'Journal',
-				icon: 'icon-[lucide--book-open]'
-			},
-			{
-				id: 'shelf-ideas',
-				workspaceId: 'ws-personal',
-				name: 'Ideas',
-				icon: 'icon-[lucide--lightbulb]'
-			},
-			{
-				id: 'shelf-notes',
-				workspaceId: 'ws-work',
-				name: 'Notes',
-				icon: 'icon-[lucide--pen-line]'
-			}
-		],
-		entries: [
-			{
-				id: 'entry-today',
-				shelfId: 'shelf-journal',
-				title: formatEntryDate(),
-				content:
-					'Quiet morning. Made coffee, sat by the window, and finally opened this page.\n\nThe point of this app is simple: write here, and nobody else can read it. Not even the server.',
-				createdAt: nowIso(),
-				updatedAt: null
-			},
-			{
-				id: 'entry-yesterday',
-				shelfId: 'shelf-journal',
-				title: formatEntryDate(new Date(Date.now() - 86400000)),
-				content: 'Walked longer than I meant to. Came home with dusty shoes and a clearer head.',
-				createdAt: new Date(Date.now() - 86400000).toISOString(),
-				updatedAt: null
-			},
-			{
-				id: 'entry-idea',
-				shelfId: 'shelf-ideas',
-				title: 'A shelf for each kind of writing',
-				content:
-					'Journal for the day. Ideas for things that are not yet a day. Work stays in its own workspace so it never sits next to the rest.',
-				createdAt: nowIso(),
-				updatedAt: null
-			},
-			{
-				id: 'entry-work',
-				shelfId: 'shelf-notes',
-				title: formatEntryDate(),
-				content:
-					'Standup notes:\n- Ship the workspace APIs\n- Prototype the journal UI\n- Keep the layout quiet',
-				createdAt: nowIso(),
-				updatedAt: null
-			}
-		]
+		id: row.id,
+		name: row.name,
+		keySalt: row.key_salt,
+		encryptedDek: row.encrypted_dek
 	};
 }
 
-function load() {
-	if (typeof sessionStorage === 'undefined') return seed();
+function mapShelf(row: api.ApiShelf, dek: Uint8Array): Shelf {
+	let name = 'Unable to decrypt';
 	try {
-		const raw = sessionStorage.getItem(STORAGE_KEY);
-		if (!raw) return seed();
-		return JSON.parse(raw) as ReturnType<typeof seed>;
+		name = decryptText(dek, base64ToBytes(row.name), 'shelf.name');
 	} catch {
-		return seed();
+		// Keep the fallback label when ciphertext does not match this DEK.
+	}
+	return {
+		id: row.id,
+		workspaceId: row.workspace_id,
+		name,
+		icon: shelfIcon(row.icon)
+	};
+}
+
+function mapEntrySummary(row: api.ApiEntrySummary, dek: Uint8Array, previous?: Entry): Entry {
+	let title = 'Unable to decrypt';
+	try {
+		title = decryptText(dek, base64ToBytes(row.title), 'entry.title');
+	} catch {
+		// Keep the fallback label when ciphertext does not match this DEK.
+	}
+	return {
+		id: row.id,
+		shelfId: row.shelf_id,
+		title: previous?.contentLoaded ? previous.title : title,
+		content: previous?.contentLoaded ? previous.content : '',
+		contentLoaded: previous?.contentLoaded ?? false,
+		saveStatus: previous?.saveStatus ?? 'saved',
+		createdAt: row.created_at,
+		updatedAt: row.updated_at
+	};
+}
+
+function mapFullEntry(row: api.ApiEntry, dek: Uint8Array, previous?: Entry): Entry {
+	const summary = mapEntrySummary(row, dek, previous);
+	try {
+		return {
+			...summary,
+			title: decryptText(dek, base64ToBytes(row.title), 'entry.title'),
+			content: decryptText(dek, base64ToBytes(row.content), 'entry.content'),
+			contentLoaded: true,
+			saveStatus: previous?.saveStatus === 'saving' ? 'saving' : 'saved'
+		};
+	} catch {
+		return { ...summary, contentLoaded: true };
 	}
 }
 
 class Journal {
-	workspaces = $state<Workspace[]>([]);
-	shelves = $state<Shelf[]>([]);
-	entries = $state<Entry[]>([]);
-
-	constructor() {
-		const data = load();
-		this.workspaces = data.workspaces;
-		this.shelves = data.shelves;
-		this.entries = data.entries;
-	}
-
-	private persist() {
-		if (typeof sessionStorage === 'undefined') return;
-		sessionStorage.setItem(
-			STORAGE_KEY,
-			JSON.stringify({
-				workspaces: this.workspaces,
-				shelves: this.shelves,
-				entries: this.entries
-			})
-		);
-	}
+	workspaces = $state.raw<Workspace[]>([]);
+	shelves = $state.raw<Shelf[]>([]);
+	entries = $state.raw<Entry[]>([]);
+	loading = $state(false);
+	error = $state<string | null>(null);
+	#saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+	#dirty = new Set<string>();
+	#contentLoads = new Set<string>();
 
 	workspace(id: string) {
 		return this.workspaces.find((workspace) => workspace.id === id);
@@ -165,72 +149,251 @@ class Journal {
 			.toSorted((a, b) => b.createdAt.localeCompare(a.createdAt));
 	}
 
-	createWorkspace(name: string) {
-		const workspace: Workspace = { id: crypto.randomUUID(), name };
-		this.workspaces = [workspace, ...this.workspaces];
-		const shelf: Shelf = {
-			id: crypto.randomUUID(),
-			workspaceId: workspace.id,
-			name: 'Journal',
-			icon: 'icon-[lucide--book-open]'
-		};
-		this.shelves = [...this.shelves, shelf];
-		this.persist();
-		return workspace;
+	entry(id: string) {
+		return this.entries.find((entry) => entry.id === id);
 	}
 
-	createShelf(workspaceId: string, name: string, icon: string) {
-		const shelf: Shelf = {
-			id: crypto.randomUUID(),
-			workspaceId,
-			name,
-			icon
-		};
+	clearWorkspace() {
+		this.shelves = [];
+		this.entries = [];
+		this.error = null;
+	}
+
+	async loadWorkspaces() {
+		this.loading = true;
+		this.error = null;
+		try {
+			this.workspaces = (await api.listWorkspaces()).map(mapWorkspace);
+		} catch (error) {
+			this.error = error instanceof Error ? error.message : 'Could not load workspaces.';
+			throw error;
+		} finally {
+			this.loading = false;
+		}
+	}
+
+	async createWorkspace(name: string, passphrase: string) {
+		const secrets = await createWorkspaceSecrets(passphrase);
+		try {
+			const workspace = mapWorkspace(
+				await api.createWorkspace({
+					name,
+					key_salt: bytesToBase64(secrets.keySalt),
+					encrypted_dek: bytesToBase64(secrets.encryptedDek)
+				})
+			);
+			this.workspaces = [workspace, ...this.workspaces];
+			session.unlock(workspace.id, secrets.dek);
+			try {
+				const shelf = mapShelf(
+					await api.createShelf(workspace.id, {
+						name: bytesToBase64(encryptText(secrets.dek, 'Journal', 'shelf.name')),
+						icon: SHELF_ICONS[0]
+					}),
+					secrets.dek
+				);
+				this.shelves = [...this.shelves, shelf];
+			} catch {
+				// The workspace is usable; a shelf can be added after opening it.
+			}
+			return workspace;
+		} catch (error) {
+			secrets.dek.fill(0);
+			throw error;
+		}
+	}
+
+	async unlockWorkspace(workspace: Workspace, passphrase: string) {
+		const dek = await unlockDek(
+			passphrase,
+			base64ToBytes(workspace.keySalt),
+			base64ToBytes(workspace.encryptedDek)
+		);
+		session.unlock(workspace.id, dek);
+	}
+
+	async loadShelves(workspaceId: string) {
+		const dek = session.dek;
+		if (!dek) return;
+		this.loading = true;
+		this.error = null;
+		try {
+			this.shelves = (await api.listShelves(workspaceId)).map((row) => mapShelf(row, dek));
+		} catch (error) {
+			this.error = error instanceof Error ? error.message : 'Could not load shelves.';
+			throw error;
+		} finally {
+			this.loading = false;
+		}
+	}
+
+	async createShelf(workspaceId: string, name: string, icon: string) {
+		const dek = session.requireDek();
+		const shelf = mapShelf(
+			await api.createShelf(workspaceId, {
+				name: bytesToBase64(encryptText(dek, name, 'shelf.name')),
+				icon
+			}),
+			dek
+		);
 		this.shelves = [...this.shelves, shelf];
-		this.persist();
 		return shelf;
 	}
 
-	updateShelf(id: string, patch: { name?: string; icon?: string }) {
-		this.shelves = this.shelves.map((shelf) => (shelf.id === id ? { ...shelf, ...patch } : shelf));
-		this.persist();
+	async updateShelf(id: string, patch: { name?: string; icon?: string }) {
+		const dek = session.requireDek();
+		const body: { name?: string; icon?: string } = {};
+		if (patch.name !== undefined) {
+			body.name = bytesToBase64(encryptText(dek, patch.name, 'shelf.name'));
+		}
+		if (patch.icon !== undefined) body.icon = patch.icon;
+		const shelf = mapShelf(await api.updateShelf(id, body), dek);
+		this.shelves = this.shelves.map((item) => (item.id === id ? shelf : item));
 	}
 
-	deleteShelf(id: string) {
+	async deleteShelf(id: string) {
+		await this.flush();
+		await api.deleteShelf(id);
 		this.shelves = this.shelves.filter((shelf) => shelf.id !== id);
 		this.entries = this.entries.filter((entry) => entry.shelfId !== id);
-		this.persist();
 	}
 
-	createEntry(shelfId: string, title = formatEntryDate()) {
+	async loadEntries(shelfId: string) {
+		const dek = session.dek;
+		if (!dek) return;
+		const previous = new Map(this.entries.map((entry) => [entry.id, entry]));
+		const rows = await api.listEntries(shelfId);
+		const next = rows.map((row) => mapEntrySummary(row, dek, previous.get(row.id)));
+		this.entries = [...this.entries.filter((entry) => entry.shelfId !== shelfId), ...next];
+	}
+
+	async ensureContent(id: string) {
+		const dek = session.dek;
+		const current = this.entry(id);
+		if (!dek || !current || current.contentLoaded || this.#contentLoads.has(id)) return;
+		this.#contentLoads.add(id);
+		try {
+			const row = await api.getEntry(id);
+			const previous = this.entry(id);
+			if (!previous) return;
+			if (this.#dirty.has(id)) {
+				this.entries = this.entries.map((entry) =>
+					entry.id === id ? { ...entry, contentLoaded: true } : entry
+				);
+				return;
+			}
+			const loaded = mapFullEntry(row, dek, previous);
+			this.entries = this.entries.map((entry) => (entry.id === id ? loaded : entry));
+		} catch (error) {
+			this.error = error instanceof Error ? error.message : 'Could not load the note.';
+		} finally {
+			this.#contentLoads.delete(id);
+		}
+	}
+
+	async createEntry(shelfId: string, title = formatEntryDate()) {
 		const existing = this.entries.find(
 			(entry) => entry.shelfId === shelfId && entry.title === title
 		);
-		if (existing) return existing;
-		const entry: Entry = {
-			id: crypto.randomUUID(),
-			shelfId,
-			title,
-			content: '',
-			createdAt: nowIso(),
-			updatedAt: null
-		};
+		if (existing) {
+			await this.ensureContent(existing.id);
+			return existing;
+		}
+		const dek = session.requireDek();
+		const row = await api.createEntry(shelfId, {
+			title: bytesToBase64(encryptText(dek, title, 'entry.title')),
+			content: bytesToBase64(encryptText(dek, '', 'entry.content'))
+		});
+		const entry = mapFullEntry(row, dek);
 		this.entries = [entry, ...this.entries];
-		this.persist();
 		return entry;
 	}
 
 	updateEntry(id: string, patch: { title?: string; content?: string }) {
 		this.entries = this.entries.map((entry) =>
-			entry.id === id ? { ...entry, ...patch, updatedAt: nowIso() } : entry
+			entry.id === id
+				? {
+						...entry,
+						...patch,
+						contentLoaded: true,
+						saveStatus: 'saving',
+						updatedAt: new Date().toISOString()
+					}
+				: entry
 		);
-		this.persist();
+		this.#dirty.add(id);
+		const previous = this.#saveTimers.get(id);
+		if (previous) clearTimeout(previous);
+		this.#saveTimers.set(
+			id,
+			setTimeout(() => {
+				this.#saveTimers.delete(id);
+				void this.#save(id);
+			}, SAVE_DELAY_MS)
+		);
 	}
 
-	deleteEntry(id: string) {
+	async deleteEntry(id: string) {
+		this.#cancelSave(id);
+		await api.deleteEntry(id);
 		this.entries = this.entries.filter((entry) => entry.id !== id);
-		this.persist();
+	}
+
+	async flush(id?: string) {
+		if (id) {
+			this.#cancelSave(id, false);
+			if (this.#dirty.has(id)) await this.#save(id);
+			return;
+		}
+		const ids = [...new Set([...this.#dirty, ...this.#saveTimers.keys()])];
+		for (const pendingId of ids) {
+			this.#cancelSave(pendingId, false);
+			if (this.#dirty.has(pendingId)) await this.#save(pendingId);
+		}
+	}
+
+	#cancelSave(id: string, forgetDirty = true) {
+		const timer = this.#saveTimers.get(id);
+		if (timer) clearTimeout(timer);
+		this.#saveTimers.delete(id);
+		if (forgetDirty) this.#dirty.delete(id);
+	}
+
+	async #save(id: string) {
+		const dek = session.dek;
+		const entry = this.entry(id);
+		if (!dek || !entry || !this.#dirty.has(id)) return;
+		this.#dirty.delete(id);
+		this.#setSaveStatus(id, 'saving');
+		try {
+			const row = await api.updateEntry(id, {
+				title: bytesToBase64(encryptText(dek, entry.title, 'entry.title')),
+				content: bytesToBase64(encryptText(dek, entry.content, 'entry.content'))
+			});
+			if (this.#dirty.has(id)) return;
+			this.entries = this.entries.map((item) =>
+				item.id === id
+					? {
+							...item,
+							updatedAt: row.updated_at,
+							saveStatus: 'saved'
+						}
+					: item
+			);
+		} catch (error) {
+			this.#dirty.add(id);
+			this.#setSaveStatus(id, 'error');
+			this.error = error instanceof Error ? error.message : 'Could not save.';
+		}
+	}
+
+	#setSaveStatus(id: string, saveStatus: SaveStatus) {
+		this.entries = this.entries.map((entry) =>
+			entry.id === id ? { ...entry, saveStatus } : entry
+		);
 	}
 }
+
+export { CryptoError };
 
 export const journal = new Journal();

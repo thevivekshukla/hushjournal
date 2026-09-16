@@ -1,18 +1,26 @@
 <script lang="ts">
-	import { journal, type Entry } from '$lib/journal.svelte';
+	import type { Entry } from '$lib/journal.svelte';
+	import { journal } from '$lib/journal.svelte';
 
 	let { entry, onDelete }: { entry: Entry; onDelete: () => void } = $props();
-	let status = $state('Saved');
+
+	const status = $derived(
+		!entry.contentLoaded
+			? 'Loading…'
+			: entry.saveStatus === 'saving'
+				? 'Saving…'
+				: entry.saveStatus === 'error'
+					? 'Couldn’t save'
+					: 'Saved'
+	);
 
 	function updateTitle(event: Event) {
 		const title = (event.currentTarget as HTMLInputElement).value;
-		status = 'Saved';
 		journal.updateEntry(entry.id, { title });
 	}
 
 	function updateContent(event: Event) {
 		const content = (event.currentTarget as HTMLTextAreaElement).value;
-		status = 'Saved';
 		journal.updateEntry(entry.id, { content });
 	}
 </script>
@@ -34,6 +42,7 @@
 		placeholder="Title"
 		aria-label="Entry title"
 		autocomplete="off"
+		disabled={!entry.contentLoaded}
 	/>
 	<textarea
 		id="entry-content"
@@ -42,5 +51,6 @@
 		value={entry.content}
 		oninput={updateContent}
 		placeholder="Start writing…"
-		aria-label="Entry content"></textarea>
+		aria-label="Entry content"
+		disabled={!entry.contentLoaded}></textarea>
 </div>

@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { DropdownMenu } from 'bits-ui';
 	import * as api from '$lib/api';
+	import { journal } from '$lib/journal.svelte';
 	import { session } from '$lib/session.svelte';
 
 	let { compact = false }: { compact?: boolean } = $props();
@@ -10,12 +11,16 @@
 	const initial = $derived(user?.name?.charAt(0).toUpperCase() ?? '?');
 
 	function goWorkspaces() {
+		void journal.flush();
 		session.lock();
+		journal.clearWorkspace();
 		void goto(api.workspaces());
 	}
 
-	function logout() {
-		session.logout();
+	async function logout() {
+		await journal.flush();
+		await session.logout();
+		journal.clearWorkspace();
 		void goto(api.login());
 	}
 </script>
@@ -56,7 +61,7 @@
 				</DropdownMenu.Item>
 				<DropdownMenu.Item
 					class="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-error data-highlighted:bg-base-200"
-					onSelect={logout}
+					onSelect={() => void logout()}
 				>
 					<span class="icon-[lucide--log-out] size-4"></span>
 					Sign out

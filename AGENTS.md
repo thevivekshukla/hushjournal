@@ -30,7 +30,7 @@ backend/
 - Always use the type-checked SQLx macros (`query!`, `query_as!`, `query_scalar!`). Do not use `sqlx::query()`, `query_as()`, or `query_scalar()`. After adding or changing queries, run `cargo sqlx prepare --workspace` from `backend/` against a migrated database and commit the `.sqlx` cache.
 - Default API bind: `127.0.0.1:8000` (`HOST` / `PORT`). Do not change the default port to 3000.
 - `GOOGLE_LOGIN_OAUTH2` is required: `client_id,client_secret` (comma-separated, first comma splits). `GOOGLE_OAUTH_REDIRECT_URI` is required and must match the Google Cloud OAuth client redirect URI (for local: `http://127.0.0.1:8000/api/auth/google/callback`).
-- Google OAuth is the authorization-code flow. Start at `GET /api/auth/google` (optional `next` query, relative path only), callback at `GET /api/auth/google/callback`. Never log OAuth codes, tokens, or client secrets.
+- Google OAuth is the authorization-code flow. Start at `GET /api/auth/google` (optional `next` query, relative path only), callback at `GET /api/auth/google/callback`. After login, redirect to `next` or `/workspaces`. `APP_ORIGIN` (optional, e.g. `http://127.0.0.1:5173`) prefixes that path so the SPA receives the session; omit it when the app is served from the API origin. Never log OAuth codes, tokens, or client secrets.
 
 ## Postgres
 
@@ -78,12 +78,12 @@ SvelteKit SPA under `frontend/`. Full client render: `adapter-static` with `fall
 frontend/
   src/routes/           # pages; no +server.js / +page.server.js
   src/lib/components/   # bits-ui wrappers and editor chrome
-  src/lib/*.svelte.ts   # client session and prototype journal state
+  src/lib/*.svelte.ts   # client session and encrypted journal state
 ```
 
 - Use pnpm for all frontend package manager commands (`pnpm install`, `pnpm add`, `pnpm dev`, `pnpm check`). Do not use npm or yarn. Keep `pnpm-lock.yaml`; do not add `package-lock.json`.
 - `pnpm dev` from `frontend/` (Vite, default 5173). `/api` is proxied to `http://127.0.0.1:8000`.
 - Themes: DaisyUI `silk` (light) and `dim` (dark). Persist the choice in `localStorage` as `theme`.
-- Prototype UI uses in-memory/sessionStorage mock data. Do not send plaintext journal content to the API. When wiring encryption, keep AES-256-GCM-SIV on the client.
+- The SPA talks to the REST API through the Vite `/api` proxy. Encrypt shelf names, entry titles, and entry content with AES-256-GCM-SIV on the client before upload. Never send the workspace passphrase or plaintext journal content to the API. Keep the unwrapped DEK in memory only.
 - Default new-entry title is today's date: `7 Sep 2026`.
 - Use bits-ui for dialogs, dropdowns, and other focus-trap widgets. Use DaisyUI classes for visual styling. Prefer Iconify `icon-[lucide--…]` classes over per-icon Svelte packages.

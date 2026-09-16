@@ -1,70 +1,83 @@
+import * as api from '$lib/api';
+import { zeroKey } from '$lib/crypto';
+import { ApiError, setUnauthorizedHandler } from '$lib/http';
+
 export type User = {
 	id: string;
 	name: string;
 	email: string;
 };
 
-export const demoUser: User = {
-	id: 'user-1',
-	name: 'Vivek',
-	email: 'vivek@example.com'
-};
-
-const STORAGE_KEY = 'e2ejournal.session';
-
-function readStored(): { user: User | null; unlockedWorkspaceId: string | null } {
-	if (typeof sessionStorage === 'undefined') {
-		return { user: null, unlockedWorkspaceId: null };
-	}
-	try {
-		const raw = sessionStorage.getItem(STORAGE_KEY);
-		if (!raw) return { user: null, unlockedWorkspaceId: null };
-		return JSON.parse(raw);
-	} catch {
-		return { user: null, unlockedWorkspaceId: null };
-	}
+function mapUser(user: api.ApiUser): User {
+	return {
+		id: user.id,
+		name: user.name,
+		email: user.email ?? user.google_email ?? ''
+	};
 }
 
 class Session {
-	user = $state<User | null>(null);
+	user = $state.raw<User | null>(null);
+	ready = $state(false);
+	loadError = $state<string | null>(null);
 	unlockedWorkspaceId = $state<string | null>(null);
+	#dek: Uint8Array | null = null;
 
 	constructor() {
-		const stored = readStored();
-		this.user = stored.user;
-		this.unlockedWorkspaceId = stored.unlockedWorkspaceId;
+		setUnauthorizedHandler(() => this.clearLocal());
 	}
 
-	login(user: User) {
-		this.user = user;
-		this.persist();
+	get dek() {
+		return this.#dek;
 	}
 
-	unlock(workspaceId: string) {
+	async hydrate() {
+		if (this.ready) return;
+		this.loadError = null;
+		try {
+			this.user = mapUser(await api.getUser());
+		} catch (error) {
+			this.user = null;
+			if (!(error instanceof ApiError && error.status === 401)) {
+				this.loadError = error instanceof Error ? error.message : 'Could not reach the server.';
+			}
+		} finally {
+			this.ready = true;
+		}
+	}
+
+	unlock(workspaceId: string, dek: Uint8Array) {
+		zeroKey(this.#dek);
+		this.#dek = dek;
 		this.unlockedWorkspaceId = workspaceId;
-		this.persist();
 	}
 
 	lock() {
+		zeroKey(this.#dek);
+		this.#dek = null;
 		this.unlockedWorkspaceId = null;
-		this.persist();
 	}
 
-	logout() {
+	clearLocal() {
+		this.lock();
 		this.user = null;
-		this.unlockedWorkspaceId = null;
-		this.persist();
 	}
 
-	persist() {
-		if (typeof sessionStorage === 'undefined') return;
-		sessionStorage.setItem(
-			STORAGE_KEY,
-			JSON.stringify({
-				user: this.user,
-				unlockedWorkspaceId: this.unlockedWorkspaceId
-			})
-		);
+	async logout() {
+		try {
+			await api.logoutUser();
+		} catch {
+			// Cookie may already be gone; still drop local secrets.
+		} finally {
+			this.clearLocal();
+		}
+	}
+
+	requireDek() {
+		if (!this.#dek || !this.unlockedWorkspaceId) {
+			throw new Error('Workspace is locked.');
+		}
+		return this.#dek;
 	}
 }
 

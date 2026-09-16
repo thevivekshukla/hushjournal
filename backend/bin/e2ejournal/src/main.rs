@@ -29,6 +29,7 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState::connect(
         &config.database_url,
         config.cookie_secure,
+        config.app_origin.clone(),
         config.google_oauth.clone(),
     )
     .await?;

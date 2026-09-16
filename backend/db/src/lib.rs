@@ -19,6 +19,7 @@ pub struct GoogleOAuth {
 pub struct AppState {
     pub db: PgPool,
     pub cookie_secure: bool,
+    pub app_origin: Option<String>,
     pub google_oauth: GoogleOAuth,
 }
 
@@ -26,6 +27,7 @@ impl AppState {
     pub async fn connect(
         database_url: &str,
         cookie_secure: bool,
+        app_origin: Option<String>,
         google_oauth: GoogleOAuth,
     ) -> anyhow::Result<Self> {
         let db = PgPoolOptions::new()
@@ -42,6 +44,7 @@ impl AppState {
         Ok(Self {
             db,
             cookie_secure,
+            app_origin,
             google_oauth,
         })
     }

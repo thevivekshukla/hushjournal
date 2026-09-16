@@ -89,7 +89,8 @@ async fn google_callback(
 
     let next = session
         .get::<String>("oauth_next")
-        .and_then(|next| safe_next(Some(&next)));
+        .and_then(|next| safe_next(Some(&next)))
+        .unwrap_or_else(|| "/workspaces".to_string());
     session.remove(&state.db, "oauth_state").await?;
     session.remove(&state.db, "oauth_next").await?;
 
@@ -99,11 +100,7 @@ async fn google_callback(
     tracing::info!(user_id = %user.id, "user logged in with google");
 
     let jar = with_session_cookie(jar, &session, state.cookie_secure);
-    if let Some(next) = next {
-        Ok((jar, Redirect::to(&next)).into_response())
-    } else {
-        Ok((jar, Json(user)).into_response())
-    }
+    Ok((jar, Redirect::to(&app_redirect(&state.app_origin, &next))).into_response())
 }
 
 async fn logout(
@@ -157,6 +154,13 @@ fn random_token() -> String {
     let mut bytes = [0u8; 32];
     rand::rng().fill_bytes(&mut bytes);
     hex::encode(bytes)
+}
+
+fn app_redirect(app_origin: &Option<String>, next: &str) -> String {
+    match app_origin {
+        Some(origin) => format!("{origin}{next}"),
+        None => next.to_string(),
+    }
 }
 
 fn safe_next(next: Option<&str>) -> Option<String> {

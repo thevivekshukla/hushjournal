@@ -2,14 +2,11 @@
 	import { goto } from '$app/navigation';
 	import * as api from '$lib/api';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
-	import { demoUser, session } from '$lib/session.svelte';
+	import { session } from '$lib/session.svelte';
 
-	if (session.user) void goto(api.workspaces());
-
-	function signIn() {
-		session.login(demoUser);
-		void goto(api.workspaces());
-	}
+	$effect(() => {
+		if (session.user) void goto(api.workspaces());
+	});
 </script>
 
 <svelte:head>
@@ -31,10 +28,12 @@
 			<p class="mt-4 text-base-content/70">
 				Encrypted on your device. The server only ever sees ciphertext.
 			</p>
-			<button
-				type="button"
+			{#if session.loadError}
+				<p class="mt-6 text-sm text-error">{session.loadError}</p>
+			{/if}
+			<a
 				class="btn mt-8 h-12 w-full gap-3 rounded-full text-base btn-neutral"
-				onclick={signIn}
+				href={api.google(api.workspaces())}
 			>
 				<svg class="size-5" viewBox="0 0 24 24" aria-hidden="true">
 					<path
@@ -55,8 +54,10 @@
 					/>
 				</svg>
 				Continue with Google
-			</button>
-			<p class="mt-4 text-xs text-base-content/50">Prototype: sign-in uses a local demo session.</p>
+			</a>
+			<p class="mt-4 text-xs text-base-content/50">
+				Sign-in uses Google. Your passphrase never leaves this device.
+			</p>
 		</div>
 	</main>
 </div>

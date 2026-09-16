@@ -7,6 +7,7 @@ pub struct Config {
     pub host: String,
     pub port: u16,
     pub cookie_secure: bool,
+    pub app_origin: Option<String>,
     pub google_oauth: GoogleOAuth,
 }
 
@@ -28,12 +29,17 @@ impl Config {
         )?;
         let google_redirect_uri = std::env::var("GOOGLE_OAUTH_REDIRECT_URI")
             .context("GOOGLE_OAUTH_REDIRECT_URI must be set (see .env.example)")?;
+        let app_origin = match std::env::var("APP_ORIGIN") {
+            Ok(value) => parse_app_origin(&value)?,
+            Err(_) => None,
+        };
 
         Ok(Self {
             database_url,
             host,
             port,
             cookie_secure,
+            app_origin,
             google_oauth: GoogleOAuth {
                 client_id: google_client_id,
                 client_secret: google_client_secret,
@@ -45,6 +51,28 @@ impl Config {
     pub fn bind_addr(&self) -> String {
         format!("{}:{}", self.host, self.port)
     }
+}
+
+fn parse_app_origin(raw: &str) -> Result<Option<String>> {
+    let origin = raw.trim().trim_end_matches('/');
+    if origin.is_empty() {
+        return Ok(None);
+    }
+    let Some((scheme, rest)) = origin.split_once("://") else {
+        anyhow::bail!("APP_ORIGIN must be an http(s) origin like http://127.0.0.1:5173");
+    };
+    if scheme != "http" && scheme != "https" {
+        anyhow::bail!("APP_ORIGIN must be an http(s) origin like http://127.0.0.1:5173");
+    }
+    if rest.is_empty()
+        || rest.contains('/')
+        || rest.contains('?')
+        || rest.contains('#')
+        || rest.contains('\\')
+    {
+        anyhow::bail!("APP_ORIGIN must be an origin without a path, query, or fragment");
+    }
+    Ok(Some(origin.to_string()))
 }
 
 fn parse_google_login_oauth2(raw: &str) -> Result<(String, String)> {

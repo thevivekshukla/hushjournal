@@ -7,7 +7,9 @@ pnpm install
 pnpm dev
 ```
 
-The UI is a prototype with local demo data. Sign-in does not call Google yet. `/api` is proxied to `http://127.0.0.1:8000` for when the real backend is wired in.
+The API must be running on `http://127.0.0.1:8000`. Vite proxies `/api` there. Set `APP_ORIGIN=http://127.0.0.1:5173` on the API so Google login returns to this app.
+
+Shelf names, entry titles, and entry content are encrypted with AES-256-GCM-SIV in the browser before they are sent. The workspace passphrase never leaves the device.
 
 ```sh
 pnpm build

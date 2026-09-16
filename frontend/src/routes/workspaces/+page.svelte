@@ -4,8 +4,9 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import UserMenu from '$lib/components/UserMenu.svelte';
-	import { journal } from '$lib/journal.svelte';
+	import { CryptoError, journal } from '$lib/journal.svelte';
 	import { session } from '$lib/session.svelte';
+	import { untrack } from 'svelte';
 
 	let createOpen = $state(false);
 	let unlockOpen = $state(false);
@@ -13,13 +14,20 @@
 	let newName = $state('');
 	let passphrase = $state('');
 	let error = $state('');
+	let busy = $state(false);
 
 	const pendingWorkspace = $derived(
 		pendingWorkspaceId ? journal.workspace(pendingWorkspaceId) : undefined
 	);
 
 	$effect(() => {
-		if (!session.user) void goto(api.login());
+		if (!session.user) {
+			void goto(api.login());
+			return;
+		}
+		untrack(() => {
+			void journal.loadWorkspaces();
+		});
 	});
 
 	function openUnlock(id: string) {
@@ -29,17 +37,26 @@
 		unlockOpen = true;
 	}
 
-	function unlock() {
-		if (!passphrase.trim() || !pendingWorkspaceId) {
+	async function unlock() {
+		if (!passphrase.trim() || !pendingWorkspace) {
 			error = 'Enter the workspace passphrase.';
 			return;
 		}
-		session.unlock(pendingWorkspaceId);
-		unlockOpen = false;
-		void goto(api.workspace(pendingWorkspaceId));
+		busy = true;
+		error = '';
+		try {
+			await journal.unlockWorkspace(pendingWorkspace, passphrase);
+			unlockOpen = false;
+			passphrase = '';
+			void goto(api.workspace(pendingWorkspace.id));
+		} catch (cause) {
+			error = cause instanceof CryptoError ? cause.message : 'Could not unlock this workspace.';
+		} finally {
+			busy = false;
+		}
 	}
 
-	function create() {
+	async function create() {
 		const name = newName.trim();
 		if (!name) {
 			error = 'Name the workspace.';
@@ -49,12 +66,19 @@
 			error = 'Choose a passphrase. It never leaves this device.';
 			return;
 		}
-		const workspace = journal.createWorkspace(name);
-		session.unlock(workspace.id);
-		createOpen = false;
-		newName = '';
-		passphrase = '';
-		void goto(api.workspace(workspace.id));
+		busy = true;
+		error = '';
+		try {
+			const workspace = await journal.createWorkspace(name, passphrase);
+			createOpen = false;
+			newName = '';
+			passphrase = '';
+			void goto(api.workspace(workspace.id));
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : 'Could not create the workspace.';
+		} finally {
+			busy = false;
+		}
 	}
 
 	function openCreate() {
@@ -82,9 +106,14 @@
 			</div>
 		</header>
 
+		{#if journal.loading && journal.workspaces.length === 0}
+			<p class="mt-10 text-sm text-base-content/60">Loading workspaces…</p>
+		{:else if journal.error && journal.workspaces.length === 0}
+			<p class="mt-10 text-sm text-error">{journal.error}</p>
+		{/if}
+
 		<section class="mt-10 grid gap-4 sm:grid-cols-2">
 			{#each journal.workspaces as workspace (workspace.id)}
-				{@const shelfCount = journal.shelvesFor(workspace.id).length}
 				<button
 					type="button"
 					class="card border border-base-300 bg-base-200/70 text-left transition-colors hover:bg-base-200"
@@ -95,10 +124,7 @@
 							<h2 class="font-serif text-2xl font-semibold tracking-tight">{workspace.name}</h2>
 							<span class="icon-[lucide--lock-keyhole] size-5 text-base-content/50"></span>
 						</div>
-						<p class="text-sm text-base-content/60">
-							{shelfCount}
-							{shelfCount === 1 ? 'shelf' : 'shelves'}
-						</p>
+						<p class="text-sm text-base-content/60">Passphrase stays on this device.</p>
 					</div>
 				</button>
 			{/each}
@@ -131,7 +157,7 @@
 			type="password"
 			autocomplete="current-password"
 			bind:value={passphrase}
-			onkeydown={(event) => event.key === 'Enter' && unlock()}
+			onkeydown={(event) => event.key === 'Enter' && !busy && void unlock()}
 		/>
 	</label>
 	{#if error}
@@ -139,7 +165,9 @@
 	{/if}
 	{#snippet footer()}
 		<button type="button" class="btn btn-ghost" onclick={() => (unlockOpen = false)}>Cancel</button>
-		<button type="button" class="btn btn-neutral" onclick={unlock}>Unlock</button>
+		<button type="button" class="btn btn-neutral" onclick={() => void unlock()} disabled={busy}>
+			{busy ? 'Unlocking…' : 'Unlock'}
+		</button>
 	{/snippet}
 </Modal>
 
@@ -175,6 +203,8 @@
 	{/if}
 	{#snippet footer()}
 		<button type="button" class="btn btn-ghost" onclick={() => (createOpen = false)}>Cancel</button>
-		<button type="button" class="btn btn-neutral" onclick={create}>Create</button>
+		<button type="button" class="btn btn-neutral" onclick={() => void create()} disabled={busy}>
+			{busy ? 'Creating…' : 'Create'}
+		</button>
 	{/snippet}
 </Modal>
