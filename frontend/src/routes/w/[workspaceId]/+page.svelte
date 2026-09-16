@@ -11,6 +11,7 @@
 	import { SHELF_ICONS, formatEntryDate, journal, type Shelf } from '$lib/journal.svelte';
 	import { session } from '$lib/session.svelte';
 	import { untrack } from 'svelte';
+	import type { Attachment } from 'svelte/attachments';
 
 	let selectedShelfId = $state<string | null>(null);
 	let selectedEntryId = $state<string | null>(null);
@@ -95,12 +96,27 @@
 	}
 
 	async function loadMore() {
-		if (!selectedShelf) return;
+		if (!selectedShelf || journal.loadingMore || busy) return;
 		try {
 			await journal.loadMore(selectedShelf.id);
 		} catch (cause) {
 			journal.error = cause instanceof Error ? cause.message : 'Could not load more notes.';
 		}
+	}
+
+	function loadMoreSentinel(_key: string): Attachment {
+		return (node) => {
+			const root = node.parentElement;
+			if (!root) return;
+			const observer = new IntersectionObserver(
+				(records) => {
+					if (records.some((record) => record.isIntersecting)) void loadMore();
+				},
+				{ root, rootMargin: '240px 0px' }
+			);
+			observer.observe(node);
+			return () => observer.disconnect();
+		};
 	}
 
 	function selectEntry(id: string) {
@@ -307,7 +323,9 @@
 								onclick={() => selectShelf(shelf.id)}
 							>
 								<span class={[shelf.icon, 'size-4 shrink-0']}></span>
-								{#if !maskOn || selectedShelf?.id === shelf.id}
+								{#if maskOn && selectedShelf?.id !== shelf.id}
+									<span class="inline-block h-3 w-28 rounded-full bg-base-content/20"></span>
+								{:else}
 									<span class="truncate">{shelf.name}</span>
 								{/if}
 							</button>
@@ -345,7 +363,9 @@
 							onclick={() => selectShelf(shelf.id)}
 						>
 							<span class={[shelf.icon, 'size-4']}></span>
-							{#if !maskOn || selectedShelf?.id === shelf.id}
+							{#if maskOn && selectedShelf?.id !== shelf.id}
+								<span class="inline-block h-3 w-16 rounded-full bg-base-content/20"></span>
+							{:else}
 								{shelf.name}
 							{/if}
 						</button>
@@ -420,14 +440,14 @@
 						</p>
 					{/each}
 					{#if journal.hasMore}
-						<button
-							type="button"
-							class="btn mt-1 w-full btn-ghost btn-sm"
-							onclick={() => void loadMore()}
-							disabled={journal.loadingMore || busy}
+						<div
+							class="flex h-8 items-center justify-center"
+							{@attach loadMoreSentinel(`${selectedShelf?.id ?? ''}:${entries.length}`)}
 						>
-							{journal.loadingMore ? 'Loading…' : 'Load more'}
-						</button>
+							{#if journal.loadingMore}
+								<p class="text-xs text-base-content/50">Loading…</p>
+							{/if}
+						</div>
 					{/if}
 				</div>
 			</aside>
