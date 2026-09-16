@@ -33,9 +33,18 @@
 			aria-label="Account menu"
 		>
 			<span
-				class="flex size-8 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-content"
+				class="relative flex size-8 shrink-0 overflow-hidden rounded-full bg-primary text-sm font-medium text-primary-content"
 			>
-				{initial}
+				<span class="flex size-8 items-center justify-center">{initial}</span>
+				{#if user.avatarUrl}
+					<img
+						src={user.avatarUrl}
+						alt=""
+						class="absolute inset-0 size-8 object-cover"
+						referrerpolicy="no-referrer"
+						onerror={(event) => event.currentTarget.remove()}
+					/>
+				{/if}
 			</span>
 			{#if !compact}
 				<span class="hidden sm:inline">{user.name}</span>

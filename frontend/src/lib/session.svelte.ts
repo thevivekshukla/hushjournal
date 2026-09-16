@@ -6,13 +6,15 @@ export type User = {
 	id: string;
 	name: string;
 	email: string;
+	avatarUrl: string | null;
 };
 
 function mapUser(user: api.ApiUser): User {
 	return {
 		id: user.id,
 		name: user.name,
-		email: user.email ?? user.google_email ?? ''
+		email: user.email ?? user.google_email ?? '',
+		avatarUrl: user.google_avatar_url
 	};
 }
 
