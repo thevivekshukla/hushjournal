@@ -65,3 +65,21 @@ updated_at TIMESTAMPTZ
 - Never add server-side encryption, decryption, or plaintext indexing of shelf names, entry titles, or entry content.
 - Prefer storing encrypted blobs as the client sent them.
 - Ciphertext size limits (`octet_length`): shelf `name` 256 bytes, entry `title` 1 KiB, entry `content` 5 MiB.
+
+## Frontend
+
+SvelteKit SPA under `frontend/`. Full client render: `adapter-static` with `fallback: '200.html'`, and `ssr = false` in the root layout. Stack: Svelte 5 runes, Tailwind CSS 4, DaisyUI 5, bits-ui (dialogs and menus), Iconify Tailwind icons, Figtree + Literata.
+
+```
+frontend/
+  src/routes/           # pages; no +server.js / +page.server.js
+  src/lib/components/   # bits-ui wrappers and editor chrome
+  src/lib/*.svelte.ts   # client session and prototype journal state
+```
+
+- Use pnpm for all frontend package manager commands (`pnpm install`, `pnpm add`, `pnpm dev`, `pnpm check`). Do not use npm or yarn. Keep `pnpm-lock.yaml`; do not add `package-lock.json`.
+- `pnpm dev` from `frontend/` (Vite, default 5173). `/api` is proxied to `http://127.0.0.1:8000`.
+- Themes: DaisyUI `silk` (light) and `dim` (dark). Persist the choice in `localStorage` as `theme`.
+- Prototype UI uses in-memory/sessionStorage mock data. Do not send plaintext journal content to the API. When wiring encryption, keep AES-256-GCM-SIV on the client.
+- Default new-entry title is today's date: `7 Sep 2026`.
+- Use bits-ui for dialogs, dropdowns, and other focus-trap widgets. Use DaisyUI classes for visual styling. Prefer Iconify `icon-[lucide--…]` classes over per-icon Svelte packages.

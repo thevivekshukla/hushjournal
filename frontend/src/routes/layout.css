@@ -1,0 +1,40 @@
+@import '@fontsource-variable/figtree/index.css';
+@import '@fontsource-variable/literata/index.css';
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+@plugin 'daisyui' {
+	themes:
+		silk --default,
+		dim --prefersdark;
+}
+@plugin '@iconify/tailwind4';
+
+@theme {
+	--font-sans: 'Figtree Variable', ui-sans-serif, system-ui, sans-serif;
+	--font-serif: 'Literata Variable', ui-serif, Georgia, 'Times New Roman', serif;
+}
+
+html,
+body {
+	min-height: 100dvh;
+}
+
+.journal-title,
+textarea.journal-body {
+	outline: none;
+	box-shadow: none;
+}
+
+.journal-title::placeholder,
+textarea.journal-body::placeholder {
+	color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+}
+
+textarea.journal-body {
+	field-sizing: content;
+	min-height: 50vh;
+}
+
+.scrollbar-thin {
+	scrollbar-width: thin;
+}
