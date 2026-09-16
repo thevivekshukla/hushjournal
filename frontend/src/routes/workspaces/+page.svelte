@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import * as api from '$lib/api';
 	import Modal from '$lib/components/Modal.svelte';
+	import NoIndex from '$lib/components/NoIndex.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import UserMenu from '$lib/components/UserMenu.svelte';
 	import { CryptoError, journal } from '$lib/journal.svelte';
@@ -92,6 +93,8 @@
 <svelte:head>
 	<title>Workspaces · e2ejournal</title>
 </svelte:head>
+
+<NoIndex />
 
 {#if session.user}
 	<div class="mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-5 py-6">

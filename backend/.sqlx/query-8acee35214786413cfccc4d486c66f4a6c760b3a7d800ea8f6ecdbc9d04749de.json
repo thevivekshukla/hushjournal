@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT id, shelf_id, title, total_size, created_at, updated_at\n            FROM entries\n            WHERE shelf_id = $1\n            ORDER BY created_at DESC, id DESC\n        ",
+  "query": "\n                SELECT id, shelf_id, title, total_size, created_at, updated_at\n                FROM entries\n                WHERE shelf_id = $1 AND id < $2\n                ORDER BY id DESC\n                LIMIT $3\n            ",
   "describe": {
     "columns": [
       {
@@ -72,7 +72,9 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Uuid",
+        "Int8"
       ]
     },
     "nullable": [
@@ -84,5 +86,5 @@
       true
     ]
   },
-  "hash": "41f44ab0aedfbb864d7e9c58a913cd39771bea0866f62ca4e56ddae053d48bff"
+  "hash": "8acee35214786413cfccc4d486c66f4a6c760b3a7d800ea8f6ecdbc9d04749de"
 }

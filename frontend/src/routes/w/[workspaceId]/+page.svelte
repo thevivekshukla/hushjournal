@@ -4,6 +4,7 @@
 	import * as api from '$lib/api';
 	import EntryEditor from '$lib/components/EntryEditor.svelte';
 	import Modal from '$lib/components/Modal.svelte';
+	import NoIndex from '$lib/components/NoIndex.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import UserMenu from '$lib/components/UserMenu.svelte';
 	import { SHELF_ICONS, formatEntryDate, journal, type Shelf } from '$lib/journal.svelte';
@@ -75,6 +76,21 @@
 		selectedShelfId = id;
 		selectedEntryId = null;
 		mobilePane = 'nav';
+	}
+
+	function setEntryOrder(order: api.EntryOrder) {
+		if (journal.entryOrder === order) return;
+		journal.entryOrder = order;
+		if (selectedShelf) void journal.loadEntries(selectedShelf.id);
+	}
+
+	async function loadMore() {
+		if (!selectedShelf) return;
+		try {
+			await journal.loadMore(selectedShelf.id);
+		} catch (cause) {
+			journal.error = cause instanceof Error ? cause.message : 'Could not load more notes.';
+		}
 	}
 
 	function selectEntry(id: string) {
@@ -202,6 +218,8 @@
 <svelte:head>
 	<title>{workspace?.name ?? 'Journal'} · e2ejournal</title>
 </svelte:head>
+
+<NoIndex />
 
 {#if session.user && workspace && session.unlockedWorkspaceId === workspaceId}
 	<div class="flex h-dvh min-h-0 flex-col">
@@ -333,6 +351,20 @@
 						Note
 					</button>
 				</div>
+				<label class="flex items-center gap-2 px-3 pb-2" for="entry-order">
+					<span class="text-xs tracking-wide text-base-content/50 uppercase">Sort</span>
+					<select
+						id="entry-order"
+						name="order"
+						class="select min-h-8 w-full select-sm"
+						value={journal.entryOrder}
+						onchange={(event) =>
+							setEntryOrder(event.currentTarget.value === 'asc' ? 'asc' : 'desc')}
+					>
+						<option value="desc">DESC</option>
+						<option value="asc">ASC</option>
+					</select>
+				</label>
 				<div class="flex-1 scrollbar-thin overflow-y-auto px-2 pb-4">
 					{#each entries as entry (entry.id)}
 						<button
@@ -350,6 +382,16 @@
 							No entries yet. Press <kbd class="kbd kbd-sm">n</kbd> or Note.
 						</p>
 					{/each}
+					{#if journal.hasMore}
+						<button
+							type="button"
+							class="btn mt-1 w-full btn-ghost btn-sm"
+							onclick={() => void loadMore()}
+							disabled={journal.loadingMore || busy}
+						>
+							{journal.loadingMore ? 'Loading…' : 'Load more'}
+						</button>
+					{/if}
 				</div>
 			</aside>
 

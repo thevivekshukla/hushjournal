@@ -1,10 +1,27 @@
 use chrono::{DateTime, Utc};
 use errors::AppError;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{ENTRY_CONTENT_MAX, ENTRY_TITLE_MAX, map_db, require_bytes_max};
+
+pub const ENTRY_LIST_DEFAULT_LIMIT: i64 = 50;
+pub const ENTRY_LIST_MAX_LIMIT: i64 = 100;
+
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ListOrder {
+    #[default]
+    Desc,
+    Asc,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EntryPage {
+    pub entries: Vec<EntrySummary>,
+    pub next_cursor: Option<Uuid>,
+}
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct Entry {
@@ -41,25 +58,100 @@ pub fn validate_content(content: &[u8]) -> Result<(), AppError> {
     Ok(())
 }
 
+pub fn list_limit(limit: Option<i64>) -> Result<i64, AppError> {
+    match limit {
+        None => Ok(ENTRY_LIST_DEFAULT_LIMIT),
+        Some(n) if (1..=ENTRY_LIST_MAX_LIMIT).contains(&n) => Ok(n),
+        Some(_) => Err(AppError::BadRequest(
+            "limit must be between 1 and 100".into(),
+        )),
+    }
+}
+
 pub async fn list(
     pool: &PgPool,
     user_id: Uuid,
     shelf_id: Uuid,
-) -> Result<Vec<EntrySummary>, AppError> {
+    cursor: Option<Uuid>,
+    order: ListOrder,
+    limit: i64,
+) -> Result<EntryPage, AppError> {
     crate::shelves::get(pool, user_id, shelf_id).await?;
-    sqlx::query_as!(
-        EntrySummary,
-        r#"
-            SELECT id, shelf_id, title, total_size, created_at, updated_at
-            FROM entries
-            WHERE shelf_id = $1
-            ORDER BY created_at DESC, id DESC
-        "#,
-        shelf_id,
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(map_db)
+    let fetch = limit + 1;
+    let mut entries = match (order, cursor) {
+        (ListOrder::Desc, None) => sqlx::query_as!(
+            EntrySummary,
+            r#"
+                SELECT id, shelf_id, title, total_size, created_at, updated_at
+                FROM entries
+                WHERE shelf_id = $1
+                ORDER BY id DESC
+                LIMIT $2
+            "#,
+            shelf_id,
+            fetch,
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(map_db)?,
+        (ListOrder::Desc, Some(cursor)) => sqlx::query_as!(
+            EntrySummary,
+            r#"
+                SELECT id, shelf_id, title, total_size, created_at, updated_at
+                FROM entries
+                WHERE shelf_id = $1 AND id < $2
+                ORDER BY id DESC
+                LIMIT $3
+            "#,
+            shelf_id,
+            cursor,
+            fetch,
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(map_db)?,
+        (ListOrder::Asc, None) => sqlx::query_as!(
+            EntrySummary,
+            r#"
+                SELECT id, shelf_id, title, total_size, created_at, updated_at
+                FROM entries
+                WHERE shelf_id = $1
+                ORDER BY id ASC
+                LIMIT $2
+            "#,
+            shelf_id,
+            fetch,
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(map_db)?,
+        (ListOrder::Asc, Some(cursor)) => sqlx::query_as!(
+            EntrySummary,
+            r#"
+                SELECT id, shelf_id, title, total_size, created_at, updated_at
+                FROM entries
+                WHERE shelf_id = $1 AND id > $2
+                ORDER BY id ASC
+                LIMIT $3
+            "#,
+            shelf_id,
+            cursor,
+            fetch,
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(map_db)?,
+    };
+    let next_cursor = if (entries.len() as i64) > limit {
+        entries.truncate(limit as usize);
+        entries.last().map(|entry| entry.id)
+    } else {
+        None
+    };
+    Ok(EntryPage {
+        entries,
+        next_cursor,
+    })
 }
 
 pub async fn get(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Entry, AppError> {

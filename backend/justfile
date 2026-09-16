@@ -1,0 +1,2 @@
+run:
+    watchexec -r -e rs,toml,html cargo run

@@ -56,6 +56,13 @@ export type ApiEntry = ApiEntrySummary & {
 	content: string;
 };
 
+export type EntryOrder = 'asc' | 'desc';
+
+export type ApiEntryPage = {
+	entries: ApiEntrySummary[];
+	next_cursor: string | null;
+};
+
 export const getUser = () => apiFetch<ApiUser>(user());
 export const logoutUser = () => apiFetch<void>(logout(), { method: 'POST' });
 
@@ -80,7 +87,19 @@ export const updateShelf = (id: string, body: { name?: string; icon?: string }) 
 	});
 export const deleteShelf = (id: string) => apiFetch<void>(shelf(id), { method: 'DELETE' });
 
-export const listEntries = (shelfId: string) => apiFetch<ApiEntrySummary[]>(shelfEntries(shelfId));
+export const listEntries = (
+	shelfId: string,
+	params: { cursor?: string | null; order?: EntryOrder; limit?: number } = {}
+) => {
+	const search = new URLSearchParams();
+	if (params.cursor) search.set('cursor', params.cursor);
+	if (params.order) search.set('order', params.order);
+	if (params.limit) search.set('limit', String(params.limit));
+	const query = search.toString();
+	return apiFetch<ApiEntryPage>(
+		query ? `${shelfEntries(shelfId)}?${query}` : shelfEntries(shelfId)
+	);
+};
 export const getEntry = (id: string) => apiFetch<ApiEntry>(entry(id));
 export const createEntry = (shelfId: string, body: { title: string; content: string }) =>
 	apiFetch<ApiEntry>(shelfEntries(shelfId), {

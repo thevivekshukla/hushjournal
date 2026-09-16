@@ -1,4 +1,4 @@
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Json, Router};
@@ -7,7 +7,7 @@ use errors::AppError;
 use serde::Deserialize;
 use utils::UserId;
 use uuid::Uuid;
-use workspace::entries::{self, Entry, EntrySummary};
+use workspace::entries::{self, Entry, EntryPage, ListOrder};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -24,6 +24,14 @@ struct CreateEntry {
 }
 
 #[derive(Deserialize)]
+struct ListQuery {
+    cursor: Option<Uuid>,
+    #[serde(default)]
+    order: ListOrder,
+    limit: Option<i64>,
+}
+
+#[derive(Deserialize)]
 struct UpdateEntry {
     #[serde(default, deserialize_with = "workspace::b64_opt::deserialize")]
     title: Option<Vec<u8>>,
@@ -35,8 +43,20 @@ async fn list(
     State(state): State<AppState>,
     UserId(user_id): UserId,
     Path(shelf_id): Path<Uuid>,
-) -> Result<Json<Vec<EntrySummary>>, AppError> {
-    Ok(Json(entries::list(&state.db, user_id, shelf_id).await?))
+    Query(query): Query<ListQuery>,
+) -> Result<Json<EntryPage>, AppError> {
+    let limit = entries::list_limit(query.limit)?;
+    Ok(Json(
+        entries::list(
+            &state.db,
+            user_id,
+            shelf_id,
+            query.cursor,
+            query.order,
+            limit,
+        )
+        .await?,
+    ))
 }
 
 async fn get_one(

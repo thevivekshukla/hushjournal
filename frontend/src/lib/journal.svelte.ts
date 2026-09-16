@@ -130,10 +130,14 @@ class Journal {
 	shelves = $state.raw<Shelf[]>([]);
 	entries = $state.raw<Entry[]>([]);
 	loading = $state(false);
+	loadingMore = $state(false);
+	hasMore = $state(false);
+	entryOrder = $state<api.EntryOrder>('desc');
 	error = $state<string | null>(null);
 	#saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 	#dirty = new Set<string>();
 	#contentLoads = new Set<string>();
+	#nextCursor: string | null = null;
 
 	workspace(id: string) {
 		return this.workspaces.find((workspace) => workspace.id === id);
@@ -144,9 +148,10 @@ class Journal {
 	}
 
 	entriesFor(shelfId: string) {
+		const sign = this.entryOrder === 'asc' ? 1 : -1;
 		return this.entries
 			.filter((entry) => entry.shelfId === shelfId)
-			.toSorted((a, b) => b.createdAt.localeCompare(a.createdAt));
+			.toSorted((a, b) => sign * a.id.localeCompare(b.id));
 	}
 
 	entry(id: string) {
@@ -157,6 +162,9 @@ class Journal {
 		this.shelves = [];
 		this.entries = [];
 		this.error = null;
+		this.hasMore = false;
+		this.loadingMore = false;
+		this.#nextCursor = null;
 	}
 
 	async loadWorkspaces() {
@@ -258,13 +266,44 @@ class Journal {
 		this.entries = this.entries.filter((entry) => entry.shelfId !== id);
 	}
 
-	async loadEntries(shelfId: string) {
+	async loadEntries(shelfId: string, opts: { cursor?: string | null; append?: boolean } = {}) {
 		const dek = session.dek;
 		if (!dek) return;
-		const previous = new Map(this.entries.map((entry) => [entry.id, entry]));
-		const rows = await api.listEntries(shelfId);
-		const next = rows.map((row) => mapEntrySummary(row, dek, previous.get(row.id)));
-		this.entries = [...this.entries.filter((entry) => entry.shelfId !== shelfId), ...next];
+		const append = opts.append ?? false;
+		if (append) this.loadingMore = true;
+		else {
+			await this.flush();
+			this.hasMore = false;
+			this.#nextCursor = null;
+		}
+		this.error = null;
+		try {
+			const page = await api.listEntries(shelfId, {
+				cursor: opts.cursor,
+				order: this.entryOrder
+			});
+			const previous = new Map(this.entries.map((entry) => [entry.id, entry]));
+			const incoming = page.entries.map((row) => mapEntrySummary(row, dek, previous.get(row.id)));
+			if (append) {
+				const seen = new Set(
+					this.entries.filter((entry) => entry.shelfId === shelfId).map((entry) => entry.id)
+				);
+				this.entries = [...this.entries, ...incoming.filter((entry) => !seen.has(entry.id))];
+			} else {
+				this.entries = [...this.entries.filter((entry) => entry.shelfId !== shelfId), ...incoming];
+			}
+			this.#nextCursor = page.next_cursor;
+			this.hasMore = page.next_cursor != null;
+		} catch (error) {
+			this.error = error instanceof Error ? error.message : 'Could not load notes.';
+		} finally {
+			this.loadingMore = false;
+		}
+	}
+
+	async loadMore(shelfId: string) {
+		if (!this.#nextCursor || this.loadingMore) return;
+		await this.loadEntries(shelfId, { cursor: this.#nextCursor, append: true });
 	}
 
 	async ensureContent(id: string) {
@@ -298,7 +337,13 @@ class Journal {
 			content: bytesToBase64(encryptText(dek, '', 'entry.content'))
 		});
 		const entry = mapFullEntry(row, dek);
-		this.entries = [entry, ...this.entries];
+		const others = this.entries.filter((item) => item.shelfId !== shelfId);
+		const loaded = this.entries.filter((item) => item.shelfId === shelfId);
+		const sign = this.entryOrder === 'asc' ? 1 : -1;
+		this.entries = [
+			...others,
+			...[...loaded, entry].toSorted((a, b) => sign * a.id.localeCompare(b.id))
+		];
 		return entry;
 	}
 
