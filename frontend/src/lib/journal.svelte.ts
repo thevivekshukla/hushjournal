@@ -196,6 +196,12 @@ class Journal {
 		this.persist();
 	}
 
+	deleteShelf(id: string) {
+		this.shelves = this.shelves.filter((shelf) => shelf.id !== id);
+		this.entries = this.entries.filter((entry) => entry.shelfId !== id);
+		this.persist();
+	}
+
 	createEntry(shelfId: string, title = formatEntryDate()) {
 		const existing = this.entries.find(
 			(entry) => entry.shelfId === shelfId && entry.title === title

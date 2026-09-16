@@ -20,6 +20,7 @@
 	let editShelfName = $state('');
 	let editShelfIcon = $state<string>(SHELF_ICONS[0]);
 	let deleteOpen = $state(false);
+	let deleteShelfOpen = $state(false);
 
 	const workspaceId = $derived(page.params.workspaceId ?? '');
 	const workspace = $derived(journal.workspace(workspaceId));
@@ -84,6 +85,22 @@
 		if (!name || !editingShelfId) return;
 		journal.updateShelf(editingShelfId, { name, icon: editShelfIcon });
 		editShelfOpen = false;
+	}
+
+	function requestDeleteShelf() {
+		editShelfOpen = false;
+		deleteShelfOpen = true;
+	}
+
+	function confirmDeleteShelf() {
+		if (!editingShelfId) return;
+		if (selectedShelfId === editingShelfId || selectedShelf?.id === editingShelfId) {
+			selectedShelfId = null;
+			selectedEntryId = null;
+		}
+		journal.deleteShelf(editingShelfId);
+		deleteShelfOpen = false;
+		mobilePane = 'nav';
 	}
 
 	function confirmDelete() {
@@ -358,10 +375,26 @@
 		</div>
 	</form>
 	{#snippet footer()}
+		<button type="button" class="btn mr-auto btn-error" onclick={requestDeleteShelf}>
+			Delete
+		</button>
 		<button type="button" class="btn btn-ghost" onclick={() => (editShelfOpen = false)}>
 			Cancel
 		</button>
 		<button type="submit" form="edit-shelf-form" class="btn btn-neutral">Save</button>
+	{/snippet}
+</Modal>
+
+<Modal
+	bind:open={deleteShelfOpen}
+	title="Delete this shelf?"
+	description="This removes the shelf and its notes from the prototype. Later it will delete the ciphertext on the server."
+>
+	{#snippet footer()}
+		<button type="button" class="btn btn-ghost" onclick={() => (deleteShelfOpen = false)}>
+			Cancel
+		</button>
+		<button type="button" class="btn btn-error" onclick={confirmDeleteShelf}>Delete</button>
 	{/snippet}
 </Modal>
 
