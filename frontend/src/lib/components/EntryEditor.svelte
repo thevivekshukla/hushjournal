@@ -26,13 +26,18 @@
 		</button>
 	</div>
 	<input
+		id="entry-title"
+		name="title"
 		class="journal-title w-full border-0 bg-transparent px-4 font-serif text-3xl font-semibold tracking-tight outline-none md:px-10"
 		value={entry.title}
 		oninput={updateTitle}
 		placeholder="Title"
 		aria-label="Entry title"
+		autocomplete="off"
 	/>
 	<textarea
+		id="entry-content"
+		name="content"
 		class="journal-body min-h-0 w-full flex-1 resize-none border-0 bg-transparent px-4 pt-2 pb-16 font-serif text-lg leading-8 outline-none md:px-10"
 		value={entry.content}
 		oninput={updateContent}

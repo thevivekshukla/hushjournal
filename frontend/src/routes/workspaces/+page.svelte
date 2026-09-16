@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import * as api from '$lib/api';
 	import Modal from '$lib/components/Modal.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import UserMenu from '$lib/components/UserMenu.svelte';
@@ -18,7 +19,7 @@
 	);
 
 	$effect(() => {
-		if (!session.user) void goto('/');
+		if (!session.user) void goto(api.login());
 	});
 
 	function openUnlock(id: string) {
@@ -35,7 +36,7 @@
 		}
 		session.unlock(pendingWorkspaceId);
 		unlockOpen = false;
-		void goto(`/w/${pendingWorkspaceId}`);
+		void goto(api.workspace(pendingWorkspaceId));
 	}
 
 	function create() {
@@ -53,7 +54,7 @@
 		createOpen = false;
 		newName = '';
 		passphrase = '';
-		void goto(`/w/${workspace.id}`);
+		void goto(api.workspace(workspace.id));
 	}
 
 	function openCreate() {
@@ -121,9 +122,11 @@
 	title="Unlock {pendingWorkspace?.name ?? 'workspace'}"
 	description="The passphrase stays on this device. The server never sees it."
 >
-	<label class="w-full">
+	<label class="w-full" for="workspace-unlock-passphrase">
 		<span class="mb-1 block text-sm">Passphrase</span>
 		<input
+			id="workspace-unlock-passphrase"
+			name="passphrase"
 			class="input w-full"
 			type="password"
 			autocomplete="current-password"
@@ -145,13 +148,22 @@
 	title="New workspace"
 	description="Give it a name and a passphrase. Both encryption keys are derived on this device."
 >
-	<label class="w-full">
+	<label class="w-full" for="workspace-name">
 		<span class="mb-1 block text-sm">Name</span>
-		<input class="input w-full" type="text" bind:value={newName} />
+		<input
+			id="workspace-name"
+			name="name"
+			class="input w-full"
+			type="text"
+			autocomplete="off"
+			bind:value={newName}
+		/>
 	</label>
-	<label class="w-full">
+	<label class="w-full" for="workspace-passphrase">
 		<span class="mb-1 block text-sm">Passphrase</span>
 		<input
+			id="workspace-passphrase"
+			name="new-passphrase"
 			class="input w-full"
 			type="password"
 			autocomplete="new-password"

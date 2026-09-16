@@ -66,6 +66,10 @@ updated_at TIMESTAMPTZ
 - Prefer storing encrypted blobs as the client sent them.
 - Ciphertext size limits (`octet_length`): shelf `name` 256 bytes, entry `title` 1 KiB, entry `content` 5 MiB.
 
+## Agent
+
+- Do not use browser tools or CDP (screenshots, snapshots, clicks, `Runtime.evaluate`) unless the user explicitly asks. UI work is code-only until then.
+
 ## Frontend
 
 SvelteKit SPA under `frontend/`. Full client render: `adapter-static` with `fallback: '200.html'`, and `ssr = false` in the root layout. Stack: Svelte 5 runes, Tailwind CSS 4, DaisyUI 5, bits-ui (dialogs and menus), Iconify Tailwind icons, Figtree + Literata.

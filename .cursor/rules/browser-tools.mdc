@@ -1,0 +1,17 @@
+---
+description: Do not use browser tools or CDP unless the user explicitly asks
+alwaysApply: true
+---
+
+# Browser tools and CDP
+
+Do not use browser automation unless the user explicitly asks for it (for example: open the app, click through a flow, take a screenshot, verify in the browser, or use CDP).
+
+This includes Cursor browser MCP tools, Chrome DevTools Protocol (`browser_cdp`, `Runtime.evaluate`, screenshots, snapshots, clicks, typing), Playwright, and any other headless/in-IDE browser.
+
+UI, layout, and frontend work is code-only unless the user says to check it in the browser. Do not treat verification as implied permission. If a browser pass would help, ask first.
+
+```
+❌ BAD — after a UI change, silently open localhost and snapshot/click via browser tools
+✅ GOOD — implement the change; use the browser only when the user asks to verify or demo it
+```

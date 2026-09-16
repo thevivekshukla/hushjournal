@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import * as api from '$lib/api';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import { demoUser, session } from '$lib/session.svelte';
 
-	if (session.user) void goto('/workspaces');
+	if (session.user) void goto(api.workspaces());
 
 	function signIn() {
 		session.login(demoUser);
-		void goto('/workspaces');
+		void goto(api.workspaces());
 	}
 </script>
 

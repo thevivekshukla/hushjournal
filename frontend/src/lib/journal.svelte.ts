@@ -181,6 +181,11 @@ class Journal {
 		return shelf;
 	}
 
+	updateShelf(id: string, patch: { name?: string; icon?: string }) {
+		this.shelves = this.shelves.map((shelf) => (shelf.id === id ? { ...shelf, ...patch } : shelf));
+		this.persist();
+	}
+
 	createEntry(shelfId: string, title = formatEntryDate()) {
 		const existing = this.entries.find(
 			(entry) => entry.shelfId === shelfId && entry.title === title

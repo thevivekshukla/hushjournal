@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import * as api from '$lib/api';
 	import EntryEditor from '$lib/components/EntryEditor.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import UserMenu from '$lib/components/UserMenu.svelte';
-	import { SHELF_ICONS, formatEntryDate, journal } from '$lib/journal.svelte';
+	import { SHELF_ICONS, formatEntryDate, journal, type Shelf } from '$lib/journal.svelte';
 	import { session } from '$lib/session.svelte';
 
 	let selectedShelfId = $state<string | null>(null);
@@ -14,6 +15,10 @@
 	let shelfOpen = $state(false);
 	let newShelfName = $state('');
 	let newShelfIcon = $state<string>(SHELF_ICONS[0]);
+	let editShelfOpen = $state(false);
+	let editingShelfId = $state<string | null>(null);
+	let editShelfName = $state('');
+	let editShelfIcon = $state<string>(SHELF_ICONS[0]);
 	let deleteOpen = $state(false);
 
 	const workspaceId = $derived(page.params.workspaceId ?? '');
@@ -29,11 +34,11 @@
 
 	$effect(() => {
 		if (!session.user) {
-			void goto('/');
+			void goto(api.login());
 			return;
 		}
 		if (!workspace || session.unlockedWorkspaceId !== workspaceId) {
-			void goto('/workspaces');
+			void goto(api.workspaces());
 		}
 	});
 
@@ -63,6 +68,22 @@
 		selectedEntryId = null;
 		newShelfName = '';
 		shelfOpen = false;
+	}
+
+	function openEditShelf(shelf: Shelf, event?: MouseEvent) {
+		event?.stopPropagation();
+		editingShelfId = shelf.id;
+		editShelfName = shelf.name;
+		editShelfIcon = shelf.icon;
+		editShelfOpen = true;
+	}
+
+	function saveShelf(event: SubmitEvent) {
+		event.preventDefault();
+		const name = editShelfName.trim();
+		if (!name || !editingShelfId) return;
+		journal.updateShelf(editingShelfId, { name, icon: editShelfIcon });
+		editShelfOpen = false;
 	}
 
 	function confirmDelete() {
@@ -107,7 +128,7 @@
 				class="btn gap-2 btn-ghost px-2 btn-sm"
 				onclick={() => {
 					session.lock();
-					void goto('/workspaces');
+					void goto(api.workspaces());
 				}}
 			>
 				<span class="icon-[lucide--lock-keyhole] size-4"></span>
@@ -134,19 +155,32 @@
 				</div>
 				<nav class="flex-1 scrollbar-thin overflow-y-auto px-2 pb-4">
 					{#each shelves as shelf (shelf.id)}
-						<button
-							type="button"
+						<div
 							class={[
-								'flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition-colors',
-								selectedShelf?.id === shelf.id
-									? 'bg-base-200 font-medium'
-									: 'text-base-content/80 hover:bg-base-200/70'
+								'group flex w-full items-center rounded-xl',
+								selectedShelf?.id === shelf.id ? 'bg-base-200' : 'hover:bg-base-200/70'
 							]}
-							onclick={() => selectShelf(shelf.id)}
 						>
-							<span class={[shelf.icon, 'size-4 shrink-0']}></span>
-							<span class="truncate">{shelf.name}</span>
-						</button>
+							<button
+								type="button"
+								class={[
+									'flex min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition-colors',
+									selectedShelf?.id === shelf.id ? 'font-medium' : 'text-base-content/80'
+								]}
+								onclick={() => selectShelf(shelf.id)}
+							>
+								<span class={[shelf.icon, 'size-4 shrink-0']}></span>
+								<span class="truncate">{shelf.name}</span>
+							</button>
+							<button
+								type="button"
+								class="btn mr-1 btn-circle btn-ghost opacity-0 btn-xs group-hover:opacity-100 focus-visible:opacity-100"
+								aria-label="Edit shelf"
+								onclick={(event) => openEditShelf(shelf, event)}
+							>
+								<span class="icon-[lucide--pencil] size-3.5"></span>
+							</button>
+						</div>
 					{/each}
 					{#if shelves.length === 0}
 						<p class="px-3 py-6 text-sm text-base-content/60">Create a shelf to start writing.</p>
@@ -184,8 +218,24 @@
 					</button>
 				</div>
 				<div class="flex items-center justify-between gap-2 px-3 pt-4 pb-2">
-					<p class="truncate text-sm font-medium">{selectedShelf?.name ?? 'Entries'}</p>
-					<button type="button" class="btn rounded-full btn-neutral btn-sm" onclick={writeToday}>
+					<div class="flex min-w-0 flex-1 items-center gap-1">
+						<p class="truncate text-sm font-medium">{selectedShelf?.name ?? 'Entries'}</p>
+						{#if selectedShelf}
+							<button
+								type="button"
+								class="btn btn-circle shrink-0 btn-ghost btn-xs"
+								aria-label="Edit shelf"
+								onclick={() => openEditShelf(selectedShelf)}
+							>
+								<span class="icon-[lucide--pencil] size-3.5"></span>
+							</button>
+						{/if}
+					</div>
+					<button
+						type="button"
+						class="btn shrink-0 rounded-full btn-neutral btn-sm"
+						onclick={writeToday}
+					>
 						<span class="icon-[lucide--plus] size-4"></span>
 						Note
 					</button>
@@ -239,9 +289,16 @@
 	title="New shelf"
 	description="Shelf names are encrypted before they are stored."
 >
-	<label class="w-full">
+	<label class="w-full" for="new-shelf-name">
 		<span class="mb-1 block text-sm">Name</span>
-		<input class="input w-full" type="text" bind:value={newShelfName} />
+		<input
+			id="new-shelf-name"
+			name="name"
+			class="input w-full"
+			type="text"
+			autocomplete="off"
+			bind:value={newShelfName}
+		/>
 	</label>
 	<div>
 		<p class="mb-2 text-sm">Icon</p>
@@ -261,6 +318,50 @@
 	{#snippet footer()}
 		<button type="button" class="btn btn-ghost" onclick={() => (shelfOpen = false)}>Cancel</button>
 		<button type="button" class="btn btn-neutral" onclick={createShelf}>Create</button>
+	{/snippet}
+</Modal>
+
+<Modal
+	bind:open={editShelfOpen}
+	title="Edit shelf"
+	description="Shelf names are encrypted before they are stored."
+>
+	<form id="edit-shelf-form" class="flex flex-col gap-3" onsubmit={saveShelf}>
+		<label class="w-full" for="edit-shelf-name">
+			<span class="mb-1 block text-sm">Name</span>
+			<!-- svelte-ignore a11y_autofocus -->
+			<input
+				id="edit-shelf-name"
+				name="name"
+				class="input w-full"
+				type="text"
+				placeholder="Name"
+				autocomplete="off"
+				bind:value={editShelfName}
+				autofocus
+			/>
+		</label>
+		<div>
+			<p class="mb-2 text-sm">Icon</p>
+			<div class="flex flex-wrap gap-2">
+				{#each SHELF_ICONS as icon (icon)}
+					<button
+						type="button"
+						class={['btn btn-square btn-sm', editShelfIcon === icon ? 'btn-neutral' : 'btn-ghost']}
+						aria-label="Shelf icon"
+						onclick={() => (editShelfIcon = icon)}
+					>
+						<span class={[icon, 'size-4']}></span>
+					</button>
+				{/each}
+			</div>
+		</div>
+	</form>
+	{#snippet footer()}
+		<button type="button" class="btn btn-ghost" onclick={() => (editShelfOpen = false)}>
+			Cancel
+		</button>
+		<button type="submit" form="edit-shelf-form" class="btn btn-neutral">Save</button>
 	{/snippet}
 </Modal>
 

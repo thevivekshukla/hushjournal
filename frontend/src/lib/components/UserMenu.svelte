@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { DropdownMenu } from 'bits-ui';
+	import * as api from '$lib/api';
 	import { session } from '$lib/session.svelte';
 
 	let { compact = false }: { compact?: boolean } = $props();
@@ -10,12 +11,12 @@
 
 	function goWorkspaces() {
 		session.lock();
-		void goto('/workspaces');
+		void goto(api.workspaces());
 	}
 
 	function logout() {
 		session.logout();
-		void goto('/');
+		void goto(api.login());
 	}
 </script>
 
