@@ -15,6 +15,8 @@ export type Workspace = {
 	name: string;
 	keySalt: string;
 	encryptedDek: string;
+	passphraseHint: string | null;
+	mask: boolean;
 };
 
 export type Shelf = {
@@ -72,7 +74,9 @@ function mapWorkspace(row: api.ApiWorkspace): Workspace {
 		id: row.id,
 		name: row.name,
 		keySalt: row.key_salt,
-		encryptedDek: row.encrypted_dek
+		encryptedDek: row.encrypted_dek,
+		passphraseHint: row.passphrase_hint,
+		mask: row.mask ?? false
 	};
 }
 
@@ -180,14 +184,16 @@ class Journal {
 		}
 	}
 
-	async createWorkspace(name: string, passphrase: string) {
+	async createWorkspace(name: string, passphrase: string, passphraseHint = '') {
 		const secrets = await createWorkspaceSecrets(passphrase);
+		const hint = passphraseHint.trim();
 		try {
 			const workspace = mapWorkspace(
 				await api.createWorkspace({
 					name,
 					key_salt: bytesToBase64(secrets.keySalt),
-					encrypted_dek: bytesToBase64(secrets.encryptedDek)
+					encrypted_dek: bytesToBase64(secrets.encryptedDek),
+					...(hint ? { passphrase_hint: hint } : {})
 				})
 			);
 			this.workspaces = [workspace, ...this.workspaces];
@@ -209,6 +215,19 @@ class Journal {
 			secrets.dek.fill(0);
 			throw error;
 		}
+	}
+
+	async updateWorkspace(
+		id: string,
+		patch: { name?: string; passphraseHint?: string; mask?: boolean }
+	) {
+		const body: { name?: string; passphrase_hint?: string; mask?: boolean } = {};
+		if (patch.name !== undefined) body.name = patch.name;
+		if (patch.passphraseHint !== undefined) body.passphrase_hint = patch.passphraseHint;
+		if (patch.mask !== undefined) body.mask = patch.mask;
+		const workspace = mapWorkspace(await api.updateWorkspace(id, body));
+		this.workspaces = this.workspaces.map((item) => (item.id === id ? workspace : item));
+		return workspace;
 	}
 
 	async unlockWorkspace(workspace: Workspace, passphrase: string) {

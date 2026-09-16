@@ -9,11 +9,14 @@
 	import { session } from '$lib/session.svelte';
 	import { untrack } from 'svelte';
 
+	const HINT_MAX = 255;
+
 	let createOpen = $state(false);
 	let unlockOpen = $state(false);
 	let pendingWorkspaceId = $state<string | null>(null);
 	let newName = $state('');
 	let passphrase = $state('');
+	let hint = $state('');
 	let error = $state('');
 	let busy = $state(false);
 
@@ -70,10 +73,11 @@
 		busy = true;
 		error = '';
 		try {
-			const workspace = await journal.createWorkspace(name, passphrase);
+			const workspace = await journal.createWorkspace(name, passphrase, hint);
 			createOpen = false;
 			newName = '';
 			passphrase = '';
+			hint = '';
 			void goto(api.workspace(workspace.id));
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : 'Could not create the workspace.';
@@ -86,6 +90,7 @@
 		error = '';
 		newName = '';
 		passphrase = '';
+		hint = '';
 		createOpen = true;
 	}
 </script>
@@ -127,7 +132,11 @@
 							<h2 class="font-serif text-2xl font-semibold tracking-tight">{workspace.name}</h2>
 							<span class="icon-[lucide--lock-keyhole] size-5 text-base-content/50"></span>
 						</div>
-						<p class="text-sm text-base-content/60">Passphrase stays on this device.</p>
+						{#if workspace.passphraseHint}
+							<p class="text-sm text-base-content/60">Hint: {workspace.passphraseHint}</p>
+						{:else}
+							<p class="text-sm text-base-content/60">Passphrase stays on this device.</p>
+						{/if}
 					</div>
 				</button>
 			{/each}
@@ -151,6 +160,9 @@
 	title="Unlock {pendingWorkspace?.name ?? 'workspace'}"
 	description="The passphrase stays on this device. The server never sees it."
 >
+	{#if pendingWorkspace?.passphraseHint}
+		<p class="text-sm text-base-content/70">Hint: {pendingWorkspace.passphraseHint}</p>
+	{/if}
 	<label class="w-full" for="workspace-unlock-passphrase">
 		<span class="mb-1 block text-sm">Passphrase</span>
 		<input
@@ -200,6 +212,19 @@
 			autocomplete="new-password"
 			bind:value={passphrase}
 		/>
+	</label>
+	<label class="w-full" for="workspace-passphrase-hint">
+		<span class="mb-1 block text-sm">Passphrase hint (optional)</span>
+		<input
+			id="workspace-passphrase-hint"
+			name="passphrase-hint"
+			class="input w-full"
+			type="text"
+			autocomplete="off"
+			maxlength={HINT_MAX}
+			bind:value={hint}
+		/>
+		<span class="mt-1 block text-xs text-base-content/50">Shown before unlock. Not encrypted.</span>
 	</label>
 	{#if error}
 		<p class="text-sm text-error">{error}</p>

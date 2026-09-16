@@ -8,6 +8,7 @@ pub use bytes::{b64, b64_opt};
 use errors::AppError;
 
 pub const MAX_NAME_LEN: usize = 255;
+pub const PASSPHRASE_HINT_MAX: usize = 255;
 pub const MAX_ICON_LEN: usize = 128;
 pub const KEY_SALT_MAX: usize = 1024;
 pub const ENCRYPTED_DEK_MAX: usize = 8192;
@@ -49,6 +50,8 @@ fn check_violation_message(message: &str) -> String {
         "a user cannot have more than 20 workspaces".into()
     } else if message.contains("shelves_max") || message.contains("more than 100 shelves") {
         "a workspace cannot have more than 100 shelves".into()
+    } else if message.contains("workspaces_passphrase_hint") {
+        "passphrase hint is too long".into()
     } else if message.contains("shelves_name_len") {
         "shelf name is too long".into()
     } else if message.contains("entries_title_len") {

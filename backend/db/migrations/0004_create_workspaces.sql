@@ -4,8 +4,15 @@ CREATE TABLE workspaces (
     name TEXT NOT NULL,
     key_salt BYTEA NOT NULL,
     encrypted_dek BYTEA NOT NULL,
+    passphrase_hint TEXT,
+    mask BOOLEAN NOT NULL DEFAULT false,
+    total_workspace_size BIGINT NOT NULL DEFAULT 0,
+    size_last_calculated_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ
+    updated_at TIMESTAMPTZ,
+    CONSTRAINT workspaces_passphrase_hint_len CHECK (
+        passphrase_hint IS NULL OR char_length(passphrase_hint) <= 255
+    )
 );
 
 CREATE INDEX workspaces_user_id_idx ON workspaces (user_id);

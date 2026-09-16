@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT id, user_id, name, key_salt, encrypted_dek, created_at, updated_at\n            FROM workspaces\n            WHERE id = $1 AND user_id = $2\n        ",
+  "query": "\n            INSERT INTO workspaces (user_id, name, key_salt, encrypted_dek, passphrase_hint)\n            VALUES ($1, $2, $3, $4, $5)\n            RETURNING id, user_id, name, key_salt, encrypted_dek, passphrase_hint, mask,\n                total_workspace_size, size_last_calculated_at, created_at, updated_at\n        ",
   "describe": {
     "columns": [
       {
@@ -60,6 +60,50 @@
       },
       {
         "ordinal": 5,
+        "name": "passphrase_hint",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "workspaces",
+            "name": "passphrase_hint"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "mask",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "workspaces",
+            "name": "mask"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "total_workspace_size",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "workspaces",
+            "name": "total_workspace_size"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "size_last_calculated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "workspaces",
+            "name": "size_last_calculated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -70,7 +114,7 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 10,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -84,7 +128,10 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid"
+        "Text",
+        "Bytea",
+        "Bytea",
+        "Text"
       ]
     },
     "nullable": [
@@ -93,9 +140,13 @@
       false,
       false,
       false,
+      true,
+      false,
+      false,
+      true,
       false,
       true
     ]
   },
-  "hash": "75a3cb55de5f8e659b9cb05063889dbf3792cc95b30a21ff7c911c02bfc7fe50"
+  "hash": "280ac7355e0aa69154756db8fe852c6d3f6be52ff792f3a7a423a75f3cf6d14b"
 }

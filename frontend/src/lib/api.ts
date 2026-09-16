@@ -31,6 +31,8 @@ export type ApiWorkspace = {
 	name: string;
 	key_salt: string;
 	encrypted_dek: string;
+	passphrase_hint: string | null;
+	mask: boolean;
 	created_at: string;
 	updated_at: string | null;
 };
@@ -67,9 +69,22 @@ export const getUser = () => apiFetch<ApiUser>(user());
 export const logoutUser = () => apiFetch<void>(logout(), { method: 'POST' });
 
 export const listWorkspaces = () => apiFetch<ApiWorkspace[]>(workspaceCollection());
-export const createWorkspace = (body: { name: string; key_salt: string; encrypted_dek: string }) =>
+export const createWorkspace = (body: {
+	name: string;
+	key_salt: string;
+	encrypted_dek: string;
+	passphrase_hint?: string;
+}) =>
 	apiFetch<ApiWorkspace>(workspaceCollection(), {
 		method: 'POST',
+		body: JSON.stringify(body)
+	});
+export const updateWorkspace = (
+	id: string,
+	body: { name?: string; passphrase_hint?: string; mask?: boolean }
+) =>
+	apiFetch<ApiWorkspace>(workspaceItem(id), {
+		method: 'PATCH',
 		body: JSON.stringify(body)
 	});
 

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT id, user_id, name, key_salt, encrypted_dek, created_at, updated_at\n            FROM workspaces\n            WHERE user_id = $1\n            ORDER BY created_at DESC, id DESC\n        ",
+  "query": "\n            SELECT id, user_id, name, key_salt, encrypted_dek, passphrase_hint, mask,\n                total_workspace_size, size_last_calculated_at, created_at, updated_at\n            FROM workspaces\n            WHERE user_id = $1\n            ORDER BY created_at DESC, id DESC\n        ",
   "describe": {
     "columns": [
       {
@@ -60,6 +60,50 @@
       },
       {
         "ordinal": 5,
+        "name": "passphrase_hint",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "workspaces",
+            "name": "passphrase_hint"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "mask",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "workspaces",
+            "name": "mask"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "total_workspace_size",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "workspaces",
+            "name": "total_workspace_size"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "size_last_calculated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "workspaces",
+            "name": "size_last_calculated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -70,7 +114,7 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 10,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -92,9 +136,13 @@
       false,
       false,
       false,
+      true,
+      false,
+      false,
+      true,
       false,
       true
     ]
   },
-  "hash": "25caf77c0400478db901d1813bd46463618124731fad6f842a586d10ca544053"
+  "hash": "06dc3f4b08c45781a8e4128d13a29eef301670bfb6ff656625724208e8afca39"
 }

@@ -4,7 +4,7 @@ End-to-end encrypted journal. The client encrypts with AES-256-GCM-SIV. The serv
 
 Users sign in with Google OAuth2. A user has many Workspaces; a Workspace has one or more Shelves; a Shelf has many entries. An entry is encrypted `title` and encrypted `content`. New-entry titles default to today's date in this form: `7 Sep 2026` (set and encrypted on the client). Shelf `name` is also ciphertext.
 
-Crypto material lives on the workspace, not the user: `key_salt` and `encrypted_dek`. The server stores these as opaque blobs and must never try to unwrap them. Shelf rows belong to a workspace (`workspace_id`); entry rows belong to a shelf (`shelf_id`). Do not store plaintext for `workspaces.key_salt`, `workspaces.encrypted_dek`, `shelves.name`, `entries.title`, or `entries.content`.
+Crypto material lives on the workspace, not the user: `key_salt` and `encrypted_dek`. The server stores these as opaque blobs and must never try to unwrap them. Shelf rows belong to a workspace (`workspace_id`); entry rows belong to a shelf (`shelf_id`). Do not store plaintext for `workspaces.key_salt`, `workspaces.encrypted_dek`, `shelves.name`, `entries.title`, or `entries.content`. `workspaces.passphrase_hint` is optional plaintext (max 255 chars) so it can be shown before unlock; empty PATCH value clears it. `workspaces.mask` is a plaintext boolean (default false): when true, the client hides inactive shelf names (icons stay) and inactive entry titles.
 
 ## Backend
 
@@ -49,6 +49,7 @@ updated_at TIMESTAMPTZ
 - `updated_at` is NULL on insert. `set_updated_at()` sets it only when other columns change. After `CREATE TABLE`, attach it with `SELECT attach_updated_at_trigger('table_name');`. Do not set `updated_at` in application code.
 - `entries.total_size` is `BIGINT NOT NULL DEFAULT 0` and is set by `set_entry_total_size` on INSERT/UPDATE to `octet_length(title) + octet_length(content)`. Do not set it in application code.
 - `shelves.total_shelf_size` is `BIGINT NOT NULL DEFAULT 0`. `shelves.size_last_calculated_at` is `TIMESTAMPTZ` NULL. Both are maintained by application cron, not triggers. Recalculate a shelf when any of its entries has `created_at` or `updated_at` after `size_last_calculated_at` (treat NULL as never calculated).
+- `workspaces.total_workspace_size` is `BIGINT NOT NULL DEFAULT 0`. `workspaces.size_last_calculated_at` is `TIMESTAMPTZ` NULL. Same cron, not triggers. Recalculate a workspace when any of its shelves has `created_at`, `updated_at`, or `size_last_calculated_at` after the workspace's `size_last_calculated_at` (treat NULL as never calculated). Do not set either column in application CRUD.
 - Max 20 workspaces per user (`workspaces_max_per_user`) and 100 shelves per workspace (`shelves_max_per_workspace`). Enforced by BEFORE INSERT/UPDATE triggers; CHECK cannot see other rows.
 - Migrations live in `backend/db/migrations/` and are applied on API startup via `sqlx::migrate!()`.
 - Sessions, cookies, and other short-lived scratch data go in the UNLOGGED `kv_store` table via `db::PgStore`. Do not add Redis. Do not store journal content, `key_salt`, or `encrypted_dek` there — UNLOGGED tables skip WAL and can be lost on crash.
@@ -64,7 +65,7 @@ updated_at TIMESTAMPTZ
 
 - Never add server-side encryption, decryption, or plaintext indexing of shelf names, entry titles, or entry content.
 - Prefer storing encrypted blobs as the client sent them.
-- Ciphertext size limits (`octet_length`): shelf `name` 256 bytes, entry `title` 1 KiB, entry `content` 5 MiB.
+- Ciphertext size limits (`octet_length`): shelf `name` 256 bytes, entry `title` 1 KiB, entry `content` 5 MiB. Passphrase hint is plaintext `char_length` 255.
 
 ## Agent
 

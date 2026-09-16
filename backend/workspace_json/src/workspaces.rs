@@ -25,6 +25,7 @@ struct CreateWorkspace {
     key_salt: Vec<u8>,
     #[serde(with = "workspace::b64")]
     encrypted_dek: Vec<u8>,
+    passphrase_hint: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -34,6 +35,8 @@ struct UpdateWorkspace {
     key_salt: Option<Vec<u8>>,
     #[serde(default, deserialize_with = "workspace::b64_opt::deserialize")]
     encrypted_dek: Option<Vec<u8>>,
+    passphrase_hint: Option<String>,
+    mask: Option<bool>,
 }
 
 async fn list(
@@ -62,6 +65,7 @@ async fn create(
         &body.name,
         &body.key_salt,
         &body.encrypted_dek,
+        body.passphrase_hint.as_deref(),
     )
     .await?;
     tracing::info!(workspace_id = %workspace.id, user_id = %user_id, "workspace created");
@@ -82,6 +86,8 @@ async fn update(
             body.name.as_deref(),
             body.key_salt.as_deref(),
             body.encrypted_dek.as_deref(),
+            body.passphrase_hint.as_deref(),
+            body.mask,
         )
         .await?,
     ))

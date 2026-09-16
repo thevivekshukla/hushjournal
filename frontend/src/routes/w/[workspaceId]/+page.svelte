@@ -7,6 +7,7 @@
 	import NoIndex from '$lib/components/NoIndex.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import UserMenu from '$lib/components/UserMenu.svelte';
+	import WorkspaceEditModal from '$lib/components/WorkspaceEditModal.svelte';
 	import { SHELF_ICONS, formatEntryDate, journal, type Shelf } from '$lib/journal.svelte';
 	import { session } from '$lib/session.svelte';
 	import { untrack } from 'svelte';
@@ -23,6 +24,10 @@
 	let editShelfIcon = $state<string>(SHELF_ICONS[0]);
 	let deleteOpen = $state(false);
 	let deleteShelfOpen = $state(false);
+	let workspaceEditOpen = $state(false);
+	let editName = $state('');
+	let editHint = $state('');
+	let editMask = $state(false);
 	let busy = $state(false);
 
 	const workspaceId = $derived(page.params.workspaceId ?? '');
@@ -35,6 +40,7 @@
 	const selectedEntry = $derived(
 		entries.find((entry) => entry.id === selectedEntryId) ?? entries[0] ?? null
 	);
+	const maskOn = $derived(workspace?.mask === true);
 
 	$effect(() => {
 		if (!session.user) {
@@ -205,6 +211,14 @@
 		}
 	}
 
+	function openWorkspaceEdit() {
+		if (!workspace) return;
+		editName = workspace.name;
+		editHint = workspace.passphraseHint ?? '';
+		editMask = workspace.mask;
+		workspaceEditOpen = true;
+	}
+
 	function lockWorkspace() {
 		void journal.flush();
 		session.lock();
@@ -241,6 +255,14 @@
 			<button type="button" class="btn gap-2 btn-ghost px-2 btn-sm" onclick={lockWorkspace}>
 				<span class="icon-[lucide--lock-keyhole] size-4"></span>
 				<span class="font-serif text-base tracking-tight">{workspace.name}</span>
+			</button>
+			<button
+				type="button"
+				class="btn btn-circle btn-ghost btn-sm"
+				aria-label="Edit workspace"
+				onclick={openWorkspaceEdit}
+			>
+				<span class="icon-[lucide--pencil] size-4"></span>
 			</button>
 			<div class="ml-auto flex items-center gap-1">
 				<ThemeToggle />
@@ -281,10 +303,13 @@
 									'flex min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition-colors',
 									selectedShelf?.id === shelf.id ? 'font-medium' : 'text-base-content/80'
 								]}
+								aria-label={maskOn && selectedShelf?.id !== shelf.id ? 'Shelf' : shelf.name}
 								onclick={() => selectShelf(shelf.id)}
 							>
 								<span class={[shelf.icon, 'size-4 shrink-0']}></span>
-								<span class="truncate">{shelf.name}</span>
+								{#if !maskOn || selectedShelf?.id === shelf.id}
+									<span class="truncate">{shelf.name}</span>
+								{/if}
 							</button>
 							<button
 								type="button"
@@ -316,10 +341,13 @@
 								'btn rounded-full btn-sm',
 								selectedShelf?.id === shelf.id ? 'btn-neutral' : 'btn-ghost'
 							]}
+							aria-label={maskOn && selectedShelf?.id !== shelf.id ? 'Shelf' : shelf.name}
 							onclick={() => selectShelf(shelf.id)}
 						>
 							<span class={[shelf.icon, 'size-4']}></span>
-							{shelf.name}
+							{#if !maskOn || selectedShelf?.id === shelf.id}
+								{shelf.name}
+							{/if}
 						</button>
 					{/each}
 					<button
@@ -377,9 +405,14 @@
 								'w-full truncate rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors',
 								selectedEntry?.id === entry.id ? 'bg-base-200' : 'hover:bg-base-200/70'
 							]}
+							aria-label={maskOn && selectedEntry?.id !== entry.id ? 'Note' : entry.title}
 							onclick={() => selectEntry(entry.id)}
 						>
-							{entry.title}
+							{#if maskOn && selectedEntry?.id !== entry.id}
+								<span class="inline-block h-3 w-28 rounded-full bg-base-content/20"></span>
+							{:else}
+								{entry.title}
+							{/if}
 						</button>
 					{:else}
 						<p class="px-3 py-8 text-sm text-base-content/60">
@@ -562,3 +595,11 @@
 		</button>
 	{/snippet}
 </Modal>
+
+<WorkspaceEditModal
+	bind:open={workspaceEditOpen}
+	{workspace}
+	bind:name={editName}
+	bind:hint={editHint}
+	bind:mask={editMask}
+/>
