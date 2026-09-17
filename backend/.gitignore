@@ -1,2 +1,5 @@
 /target
 .env
+/bin/e2ejournal/static/*
+!/bin/e2ejournal/static/.gitkeep
+

@@ -1,2 +1,18 @@
+frontend := justfile_directory() / ".." / "frontend"
+spa_static := justfile_directory() / "bin" / "e2ejournal" / "static"
+
 run:
     watchexec -r -e rs,toml,html cargo run
+
+# Build the SvelteKit SPA, copy it into the API crate, then produce a release binary
+# with the frontend embedded. Deep links fall back to adapter-static's 200.html.
+build:
+    pnpm --dir "{{frontend}}" install --frozen-lockfile
+    pnpm --dir "{{frontend}}" build
+    rm -rf "{{spa_static}}"
+    mkdir -p "{{spa_static}}"
+    cp -a "{{frontend}}/build/." "{{spa_static}}/"
+    touch "{{spa_static}}/.gitkeep"
+    test -f "{{spa_static}}/200.html"
+    SQLX_OFFLINE=true cargo build --release
+    @echo "release binary: ${CARGO_TARGET_DIR:-{{justfile_directory()}}/target}/release/e2ejournal"

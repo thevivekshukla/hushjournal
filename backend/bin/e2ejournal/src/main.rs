@@ -11,6 +11,8 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use utils::Config;
 
+mod spa;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
@@ -39,6 +41,11 @@ async fn main() -> anyhow::Result<()> {
         .with_context(|| format!("failed to bind {}", config.bind_addr()))?;
 
     tracing::info!("listening on {}", listener.local_addr()?);
+    if spa::is_embedded() {
+        tracing::info!("serving embedded SPA");
+    } else {
+        tracing::info!("no embedded SPA; API only (build with `just build` for production)");
+    }
 
     axum::serve(listener, router(state))
         .with_graceful_shutdown(shutdown_signal())
@@ -68,6 +75,7 @@ fn router(state: AppState) -> Router {
     Router::new()
         .route("/health", get(health))
         .nest("/api", user_json::router().merge(workspace_json::router()))
+        .fallback(get(spa::fallback))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
 }
