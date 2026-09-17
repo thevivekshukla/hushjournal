@@ -2,9 +2,11 @@ use anyhow::Context;
 use axum::extract::State;
 use axum::routing::get;
 use axum::{Json, Router};
+use clap::{Parser, Subcommand};
 use db::AppState;
 use errors::AppError;
 use serde::Serialize;
+use std::path::PathBuf;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::layer::SubscriberExt;
@@ -13,10 +15,36 @@ use utils::Config;
 
 mod spa;
 
+#[derive(Parser)]
+#[command(name = "e2ejournal", about = "End-to-end encrypted journal API")]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    /// Backup the SQLite database
+    #[command(name = "db-backup")]
+    DbBackup {
+        /// File to write the backup to
+        #[arg(long)]
+        path: Option<PathBuf>,
+    },
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
+    init_tracing();
 
+    match Cli::parse().command {
+        Some(Command::DbBackup { path }) => db_backup(path).await,
+        None => serve().await,
+    }
+}
+
+fn init_tracing() {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -24,7 +52,20 @@ async fn main() -> anyhow::Result<()> {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
+}
 
+async fn db_backup(path: Option<PathBuf>) -> anyhow::Result<()> {
+    let database_url =
+        std::env::var("DATABASE_URL").context("DATABASE_URL must be set (see .env.example)")?;
+    let src = db::sqlite_file_path(&database_url)?;
+    let dest = path.unwrap_or_else(|| db::default_backup_path(&src));
+    let dest = db::backup_to(&database_url, &dest).await?;
+    tracing::info!("wrote backup to {}", dest.display());
+    println!("{}", dest.display());
+    Ok(())
+}
+
+async fn serve() -> anyhow::Result<()> {
     let config = Config::from_env()?;
     let state = AppState::connect(
         &config.database_url,

@@ -7,6 +7,7 @@ description = "REST API for e2ejournal (Axum + SQLx/SQLite)"
 [dependencies]
 anyhow.workspace = true
 axum.workspace = true
+clap.workspace = true
 db.workspace = true
 dotenvy.workspace = true
 errors.workspace = true
