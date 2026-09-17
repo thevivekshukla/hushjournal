@@ -38,6 +38,7 @@ backend/
 
 - File database via `DATABASE_URL` (local default: `sqlite:e2ejournal.db`). Create parent directories if the path is nested. Enable WAL, foreign keys, and a busy timeout when opening the pool. Do not add Postgres, Redis, or docker-compose for the database.
 - Backup with `e2ejournal db-backup`. It writes a consistent snapshot (`VACUUM INTO`) next to the live file as `{stem}-{YYYYMMDDTHHMMSSZ}.db`. `--path FILE` writes to that file instead and refuses to overwrite.
+- `e2ejournal env` writes a sample `.env` in the current directory (same defaults as `backend/.env.example`). If `.env` already exists it prints a message and does not overwrite.
 - Timezone is UTC. Timestamp columns are `DATETIME` stored as unix epoch seconds (`unixepoch()`). SQLx maps them to `DateTime<Utc>`. Use `unixepoch()` in SQL; do not mix SQLite `datetime()` strings with RFC 3339 values.
 - Primary keys are UUID stored as `BLOB`. SQLite has no `uuidv7()`: generate `Uuid::now_v7()` in application code and pass `id` on insert. Do not use UUIDv4.
 - Tables that need timestamps use:

@@ -31,6 +31,8 @@ enum Command {
         #[arg(long)]
         path: Option<PathBuf>,
     },
+    /// Write a sample .env with local defaults
+    Env,
 }
 
 #[tokio::main]
@@ -40,6 +42,7 @@ async fn main() -> anyhow::Result<()> {
 
     match Cli::parse().command {
         Some(Command::DbBackup { path }) => db_backup(path).await,
+        Some(Command::Env) => write_sample_env(),
         None => serve().await,
     }
 }
@@ -52,6 +55,27 @@ fn init_tracing() {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
+}
+
+const SAMPLE_ENV: &str = include_str!("../../../.env.example");
+
+fn write_sample_env() -> anyhow::Result<()> {
+    write_sample_env_to(PathBuf::from("."))
+}
+
+fn write_sample_env_to(dir: impl AsRef<std::path::Path>) -> anyhow::Result<()> {
+    let path = dir.as_ref().join(".env");
+    if path.exists() {
+        println!("{} already exists; not overwritten", path.display());
+        return Ok(());
+    }
+    std::fs::write(&path, SAMPLE_ENV)
+        .with_context(|| format!("failed to write {}", path.display()))?;
+    println!(
+        "wrote {} with local defaults; set GOOGLE_LOGIN_OAUTH2 before running the API",
+        path.display()
+    );
+    Ok(())
 }
 
 async fn db_backup(path: Option<PathBuf>) -> anyhow::Result<()> {
@@ -155,4 +179,36 @@ async fn shutdown_signal() {
     }
 
     tracing::info!("shutdown signal received");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::write_sample_env_to;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn writes_sample_env_then_leaves_existing_file() {
+        let dir = std::env::temp_dir().join(format!(
+            "e2ejournal-env-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("time")
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let env_path = dir.join(".env");
+
+        write_sample_env_to(&dir).expect("create");
+        let first = std::fs::read_to_string(&env_path).expect("read");
+        assert!(first.contains("DATABASE_URL=sqlite:e2ejournal.db"));
+        assert!(first.contains("GOOGLE_LOGIN_OAUTH2="));
+
+        std::fs::write(&env_path, "keep=me\n").expect("marker");
+        write_sample_env_to(&dir).expect("skip");
+        let second = std::fs::read_to_string(&env_path).expect("read after skip");
+        assert_eq!(second, "keep=me\n");
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
 }
