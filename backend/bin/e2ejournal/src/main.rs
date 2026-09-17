@@ -1,5 +1,6 @@
 use anyhow::Context;
 use axum::extract::State;
+use axum::response::Redirect;
 use axum::routing::get;
 use axum::{Json, Router};
 use clap::{Parser, Subcommand};
@@ -138,11 +139,16 @@ async fn size_cron(pool: sqlx::SqlitePool) {
 
 fn router(state: AppState) -> Router {
     Router::new()
+        .route("/", get(root))
         .route("/health", get(health))
         .nest("/api", user_json::router().merge(workspace_json::router()))
         .fallback(get(spa::fallback))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
+}
+
+async fn root() -> Redirect {
+    Redirect::temporary("/login")
 }
 
 #[derive(Serialize)]

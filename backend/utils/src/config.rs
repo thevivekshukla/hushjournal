@@ -20,9 +20,7 @@ impl Config {
             .unwrap_or_else(|_| "8000".into())
             .parse()
             .context("PORT must be a valid u16")?;
-        let cookie_secure = std::env::var("COOKIE_SECURE")
-            .map(|value| value == "true" || value == "1")
-            .unwrap_or(false);
+        let cookie_secure = env_bool("COOKIE_SECURE", false);
         let (google_client_id, google_client_secret) = parse_google_login_oauth2(
             &std::env::var("GOOGLE_LOGIN_OAUTH2")
                 .context("GOOGLE_LOGIN_OAUTH2 must be set (client_id,client_secret)")?,
@@ -51,6 +49,12 @@ impl Config {
     pub fn bind_addr(&self) -> String {
         format!("{}:{}", self.host, self.port)
     }
+}
+
+fn env_bool(name: &str, default: bool) -> bool {
+    std::env::var(name)
+        .map(|value| value == "true" || value == "1")
+        .unwrap_or(default)
 }
 
 fn parse_app_origin(raw: &str) -> Result<Option<String>> {
