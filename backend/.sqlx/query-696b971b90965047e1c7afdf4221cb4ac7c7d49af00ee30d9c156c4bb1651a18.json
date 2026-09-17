@@ -1,0 +1,98 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE entries\n            SET title = COALESCE($3, title),\n                content = COALESCE($4, content)\n            WHERE id = $1\n              AND shelf_id IN (\n                    SELECT s.id\n                    FROM shelves s\n                    JOIN workspaces w ON w.id = s.workspace_id\n                    WHERE w.user_id = $2\n              )\n            RETURNING id as \"id!: Uuid\", shelf_id as \"shelf_id!: Uuid\", title, content, total_size,\n                created_at as \"created_at!: DateTime<Utc>\",\n                updated_at as \"updated_at: DateTime<Utc>\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: Uuid",
+        "ordinal": 0,
+        "type_info": "Blob",
+        "origin": {
+          "Table": {
+            "table": "entries",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "shelf_id!: Uuid",
+        "ordinal": 1,
+        "type_info": "Blob",
+        "origin": {
+          "Table": {
+            "table": "entries",
+            "name": "shelf_id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 2,
+        "type_info": "Blob",
+        "origin": {
+          "Table": {
+            "table": "entries",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "content",
+        "ordinal": 3,
+        "type_info": "Blob",
+        "origin": {
+          "Table": {
+            "table": "entries",
+            "name": "content"
+          }
+        }
+      },
+      {
+        "name": "total_size",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "entries",
+            "name": "total_size"
+          }
+        }
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 5,
+        "type_info": "Datetime",
+        "origin": {
+          "Table": {
+            "table": "entries",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "name": "updated_at: DateTime<Utc>",
+        "ordinal": 6,
+        "type_info": "Datetime",
+        "origin": {
+          "Table": {
+            "table": "entries",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "696b971b90965047e1c7afdf4221cb4ac7c7d49af00ee30d9c156c4bb1651a18"
+}

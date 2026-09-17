@@ -9,3 +9,9 @@ errors.workspace = true
 serde.workspace = true
 sqlx.workspace = true
 uuid.workspace = true
+
+[dev-dependencies]
+db.workspace = true
+errors.workspace = true
+sqlx.workspace = true
+tokio.workspace = true

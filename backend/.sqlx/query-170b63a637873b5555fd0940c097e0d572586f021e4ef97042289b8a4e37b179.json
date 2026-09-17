@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                DELETE FROM kv_store\n                WHERE \"key\" = $1 AND expires > unixepoch()\n                RETURNING \"value\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "value",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "kv_store",
+            "name": "value"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "170b63a637873b5555fd0940c097e0d572586f021e4ef97042289b8a4e37b179"
+}

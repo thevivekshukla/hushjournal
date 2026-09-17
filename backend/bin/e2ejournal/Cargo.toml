@@ -2,7 +2,7 @@
 name = "e2ejournal"
 version.workspace = true
 edition.workspace = true
-description = "REST API for e2ejournal (Axum + SQLx/Postgres)"
+description = "REST API for e2ejournal (Axum + SQLx/SQLite)"
 
 [dependencies]
 anyhow.workspace = true

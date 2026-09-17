@@ -995,6 +995,7 @@ version = "0.37.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1f111c8c41e7c61a49cd34e44c7619462967221a6443b0ec299e0ac30cfb9b1"
 dependencies = [
+ "cc",
  "pkg-config",
  "vcpkg",
 ]
@@ -1704,7 +1705,6 @@ dependencies = [
  "log",
  "memchr",
  "percent-encoding",
- "rustls",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -1715,7 +1715,6 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
- "webpki-roots",
 ]
 
 [[package]]
@@ -2230,9 +2229,11 @@ name = "user"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "db",
  "errors",
  "serde",
  "sqlx",
+ "tokio",
  "uuid",
 ]
 
@@ -2589,9 +2590,12 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "chrono",
+ "db",
  "errors",
  "serde",
  "sqlx",
+ "tokio",
+ "user",
  "uuid",
 ]
 

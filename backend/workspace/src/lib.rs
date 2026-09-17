@@ -33,14 +33,20 @@ pub(crate) fn require_bytes_max(value: &[u8], field: &str, max: usize) -> Result
 }
 
 pub(crate) fn map_db(err: sqlx::Error) -> AppError {
-    if let sqlx::Error::Database(db_err) = &err
-        && let Some(code) = db_err.code()
-    {
-        match code.as_ref() {
-            "23505" => return AppError::Conflict,
-            "23514" => return AppError::BadRequest(check_violation_message(db_err.message())),
-            "23503" => return AppError::NotFound,
-            _ => {}
+    if let sqlx::Error::Database(db_err) = &err {
+        if db_err.is_unique_violation() {
+            return AppError::Conflict;
+        }
+        if db_err.is_foreign_key_violation() {
+            return AppError::NotFound;
+        }
+        if db_err.is_check_violation() {
+            return AppError::BadRequest(check_violation_message(db_err.message()));
+        }
+        let message = db_err.message();
+        if message.contains("more than 20 workspaces") || message.contains("more than 100 shelves")
+        {
+            return AppError::BadRequest(check_violation_message(message));
         }
     }
     AppError::from(err)
@@ -59,7 +65,7 @@ fn check_violation_message(message: &str) -> String {
         "entry title is too long".into()
     } else if message.contains("entries_content_len") {
         "entry content is too large".into()
-    } else if message.contains("violates check constraint") {
+    } else if message.contains("CHECK constraint") || message.contains("constraint failed") {
         "invalid request".into()
     } else {
         message.to_string()

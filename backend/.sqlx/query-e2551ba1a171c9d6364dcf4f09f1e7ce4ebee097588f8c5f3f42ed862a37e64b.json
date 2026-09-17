@@ -1,0 +1,110 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT s.id as \"id!: Uuid\", s.workspace_id as \"workspace_id!: Uuid\", s.name, s.icon,\n                s.total_shelf_size,\n                s.size_last_calculated_at as \"size_last_calculated_at: DateTime<Utc>\",\n                s.created_at as \"created_at!: DateTime<Utc>\",\n                s.updated_at as \"updated_at: DateTime<Utc>\"\n            FROM shelves s\n            JOIN workspaces w ON w.id = s.workspace_id\n            WHERE s.id = $1 AND w.user_id = $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: Uuid",
+        "ordinal": 0,
+        "type_info": "Blob",
+        "origin": {
+          "Table": {
+            "table": "shelves",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "workspace_id!: Uuid",
+        "ordinal": 1,
+        "type_info": "Blob",
+        "origin": {
+          "Table": {
+            "table": "shelves",
+            "name": "workspace_id"
+          }
+        }
+      },
+      {
+        "name": "name",
+        "ordinal": 2,
+        "type_info": "Blob",
+        "origin": {
+          "Table": {
+            "table": "shelves",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "icon",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "shelves",
+            "name": "icon"
+          }
+        }
+      },
+      {
+        "name": "total_shelf_size",
+        "ordinal": 4,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "shelves",
+            "name": "total_shelf_size"
+          }
+        }
+      },
+      {
+        "name": "size_last_calculated_at: DateTime<Utc>",
+        "ordinal": 5,
+        "type_info": "Datetime",
+        "origin": {
+          "Table": {
+            "table": "shelves",
+            "name": "size_last_calculated_at"
+          }
+        }
+      },
+      {
+        "name": "created_at!: DateTime<Utc>",
+        "ordinal": 6,
+        "type_info": "Datetime",
+        "origin": {
+          "Table": {
+            "table": "shelves",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "name": "updated_at: DateTime<Utc>",
+        "ordinal": 7,
+        "type_info": "Datetime",
+        "origin": {
+          "Table": {
+            "table": "shelves",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "e2551ba1a171c9d6364dcf4f09f1e7ce4ebee097588f8c5f3f42ed862a37e64b"
+}

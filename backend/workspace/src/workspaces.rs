@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use errors::AppError;
 use serde::Serialize;
-use sqlx::PgPool;
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::{
@@ -50,12 +50,15 @@ pub fn normalize_hint(hint: Option<&str>) -> Result<Option<String>, AppError> {
     Ok(Some(hint.to_string()))
 }
 
-pub async fn list(pool: &PgPool, user_id: Uuid) -> Result<Vec<Workspace>, AppError> {
+pub async fn list(pool: &SqlitePool, user_id: Uuid) -> Result<Vec<Workspace>, AppError> {
     sqlx::query_as!(
         Workspace,
         r#"
-            SELECT id, user_id, name, key_salt, encrypted_dek, passphrase_hint, mask,
-                total_workspace_size, size_last_calculated_at, created_at, updated_at
+            SELECT id as "id!: Uuid", user_id as "user_id!: Uuid", name, key_salt, encrypted_dek,
+                passphrase_hint, mask as "mask!: bool", total_workspace_size,
+                size_last_calculated_at as "size_last_calculated_at: DateTime<Utc>",
+                created_at as "created_at!: DateTime<Utc>",
+                updated_at as "updated_at: DateTime<Utc>"
             FROM workspaces
             WHERE user_id = $1
             ORDER BY created_at DESC, id DESC
@@ -67,12 +70,15 @@ pub async fn list(pool: &PgPool, user_id: Uuid) -> Result<Vec<Workspace>, AppErr
     .map_err(map_db)
 }
 
-pub async fn get(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Workspace, AppError> {
+pub async fn get(pool: &SqlitePool, user_id: Uuid, id: Uuid) -> Result<Workspace, AppError> {
     sqlx::query_as!(
         Workspace,
         r#"
-            SELECT id, user_id, name, key_salt, encrypted_dek, passphrase_hint, mask,
-                total_workspace_size, size_last_calculated_at, created_at, updated_at
+            SELECT id as "id!: Uuid", user_id as "user_id!: Uuid", name, key_salt, encrypted_dek,
+                passphrase_hint, mask as "mask!: bool", total_workspace_size,
+                size_last_calculated_at as "size_last_calculated_at: DateTime<Utc>",
+                created_at as "created_at!: DateTime<Utc>",
+                updated_at as "updated_at: DateTime<Utc>"
             FROM workspaces
             WHERE id = $1 AND user_id = $2
         "#,
@@ -86,13 +92,14 @@ pub async fn get(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Workspace, Ap
 }
 
 pub async fn create(
-    pool: &PgPool,
+    pool: &SqlitePool,
     user_id: Uuid,
     name: &str,
     key_salt: &[u8],
     encrypted_dek: &[u8],
     passphrase_hint: Option<&str>,
 ) -> Result<Workspace, AppError> {
+    let id = Uuid::now_v7();
     let name = normalize_name(name)?;
     require_bytes_max(key_salt, "key_salt", KEY_SALT_MAX)?;
     require_bytes_max(encrypted_dek, "encrypted_dek", ENCRYPTED_DEK_MAX)?;
@@ -101,11 +108,15 @@ pub async fn create(
     sqlx::query_as!(
         Workspace,
         r#"
-            INSERT INTO workspaces (user_id, name, key_salt, encrypted_dek, passphrase_hint)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, user_id, name, key_salt, encrypted_dek, passphrase_hint, mask,
-                total_workspace_size, size_last_calculated_at, created_at, updated_at
+            INSERT INTO workspaces (id, user_id, name, key_salt, encrypted_dek, passphrase_hint)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id as "id!: Uuid", user_id as "user_id!: Uuid", name, key_salt, encrypted_dek,
+                passphrase_hint, mask as "mask!: bool", total_workspace_size,
+                size_last_calculated_at as "size_last_calculated_at: DateTime<Utc>",
+                created_at as "created_at!: DateTime<Utc>",
+                updated_at as "updated_at: DateTime<Utc>"
         "#,
+        id,
         user_id,
         name,
         key_salt,
@@ -118,7 +129,7 @@ pub async fn create(
 }
 
 pub async fn update(
-    pool: &PgPool,
+    pool: &SqlitePool,
     user_id: Uuid,
     id: Uuid,
     name: Option<&str>,
@@ -160,8 +171,11 @@ pub async fn update(
                 passphrase_hint = CASE WHEN $6 THEN $7 ELSE passphrase_hint END,
                 mask = COALESCE($8, mask)
             WHERE id = $1 AND user_id = $2
-            RETURNING id, user_id, name, key_salt, encrypted_dek, passphrase_hint, mask,
-                total_workspace_size, size_last_calculated_at, created_at, updated_at
+            RETURNING id as "id!: Uuid", user_id as "user_id!: Uuid", name, key_salt, encrypted_dek,
+                passphrase_hint, mask as "mask!: bool", total_workspace_size,
+                size_last_calculated_at as "size_last_calculated_at: DateTime<Utc>",
+                created_at as "created_at!: DateTime<Utc>",
+                updated_at as "updated_at: DateTime<Utc>"
         "#,
         id,
         user_id,
@@ -178,7 +192,7 @@ pub async fn update(
     .ok_or(AppError::NotFound)
 }
 
-pub async fn delete(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
+pub async fn delete(pool: &SqlitePool, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
     let result = sqlx::query!(
         "DELETE FROM workspaces WHERE id = $1 AND user_id = $2",
         id,

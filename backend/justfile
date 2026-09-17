@@ -4,6 +4,19 @@ spa_static := justfile_directory() / "bin" / "e2ejournal" / "static"
 run:
     watchexec -r -e rs,toml,html cargo run
 
+# Refresh the SQLx query cache against a throwaway migrated sqlite file.
+prepare:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{justfile_directory()}}"
+    db="{{justfile_directory()}}/.sqlx-prepare.db"
+    rm -f "$db" "$db"-wal "$db"-shm
+    export DATABASE_URL="sqlite://${db}"
+    export SQLX_OFFLINE=false
+    cargo sqlx database create
+    cargo sqlx migrate run --source db/migrations
+    cargo sqlx prepare --workspace
+
 # Build the SvelteKit SPA, copy it into the API crate, then produce a release binary
 # with the frontend embedded. Deep links fall back to adapter-static's 200.html.
 build:

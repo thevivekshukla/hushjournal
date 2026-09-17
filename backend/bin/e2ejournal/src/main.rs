@@ -33,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
         config.google_oauth.clone(),
     )
     .await?;
-    tokio::spawn(db::pgstore_cleanup(state.db.clone()));
+    tokio::spawn(db::kvstore_cleanup(state.db.clone()));
     tokio::spawn(size_cron(state.db.clone()));
 
     let listener = TcpListener::bind(config.bind_addr())
@@ -55,7 +55,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn size_cron(pool: sqlx::PgPool) {
+async fn size_cron(pool: sqlx::SqlitePool) {
     loop {
         match workspace::sizes::recalculate_stale_shelf_sizes(&pool).await {
             Ok(n) if n > 0 => tracing::info!(shelves = n, "recalculated shelf sizes"),

@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use errors::AppError;
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::{ENTRY_CONTENT_MAX, ENTRY_TITLE_MAX, map_db, require_bytes_max};
@@ -69,7 +69,7 @@ pub fn list_limit(limit: Option<i64>) -> Result<i64, AppError> {
 }
 
 pub async fn list(
-    pool: &PgPool,
+    pool: &SqlitePool,
     user_id: Uuid,
     shelf_id: Uuid,
     cursor: Option<Uuid>,
@@ -82,7 +82,9 @@ pub async fn list(
         (ListOrder::Desc, None) => sqlx::query_as!(
             EntrySummary,
             r#"
-                SELECT id, shelf_id, title, total_size, created_at, updated_at
+                SELECT id as "id!: Uuid", shelf_id as "shelf_id!: Uuid", title, total_size,
+                    created_at as "created_at!: DateTime<Utc>",
+                    updated_at as "updated_at: DateTime<Utc>"
                 FROM entries
                 WHERE shelf_id = $1
                 ORDER BY id DESC
@@ -97,7 +99,9 @@ pub async fn list(
         (ListOrder::Desc, Some(cursor)) => sqlx::query_as!(
             EntrySummary,
             r#"
-                SELECT id, shelf_id, title, total_size, created_at, updated_at
+                SELECT id as "id!: Uuid", shelf_id as "shelf_id!: Uuid", title, total_size,
+                    created_at as "created_at!: DateTime<Utc>",
+                    updated_at as "updated_at: DateTime<Utc>"
                 FROM entries
                 WHERE shelf_id = $1 AND id < $2
                 ORDER BY id DESC
@@ -113,7 +117,9 @@ pub async fn list(
         (ListOrder::Asc, None) => sqlx::query_as!(
             EntrySummary,
             r#"
-                SELECT id, shelf_id, title, total_size, created_at, updated_at
+                SELECT id as "id!: Uuid", shelf_id as "shelf_id!: Uuid", title, total_size,
+                    created_at as "created_at!: DateTime<Utc>",
+                    updated_at as "updated_at: DateTime<Utc>"
                 FROM entries
                 WHERE shelf_id = $1
                 ORDER BY id ASC
@@ -128,7 +134,9 @@ pub async fn list(
         (ListOrder::Asc, Some(cursor)) => sqlx::query_as!(
             EntrySummary,
             r#"
-                SELECT id, shelf_id, title, total_size, created_at, updated_at
+                SELECT id as "id!: Uuid", shelf_id as "shelf_id!: Uuid", title, total_size,
+                    created_at as "created_at!: DateTime<Utc>",
+                    updated_at as "updated_at: DateTime<Utc>"
                 FROM entries
                 WHERE shelf_id = $1 AND id > $2
                 ORDER BY id ASC
@@ -154,12 +162,14 @@ pub async fn list(
     })
 }
 
-pub async fn get(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Entry, AppError> {
+pub async fn get(pool: &SqlitePool, user_id: Uuid, id: Uuid) -> Result<Entry, AppError> {
     sqlx::query_as!(
         Entry,
         r#"
-            SELECT e.id, e.shelf_id, e.title, e.content, e.total_size,
-                e.created_at, e.updated_at
+            SELECT e.id as "id!: Uuid", e.shelf_id as "shelf_id!: Uuid", e.title, e.content,
+                e.total_size,
+                e.created_at as "created_at!: DateTime<Utc>",
+                e.updated_at as "updated_at: DateTime<Utc>"
             FROM entries e
             JOIN shelves s ON s.id = e.shelf_id
             JOIN workspaces w ON w.id = s.workspace_id
@@ -175,7 +185,7 @@ pub async fn get(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Entry, AppErr
 }
 
 pub async fn create(
-    pool: &PgPool,
+    pool: &SqlitePool,
     user_id: Uuid,
     shelf_id: Uuid,
     title: &[u8],
@@ -183,17 +193,21 @@ pub async fn create(
 ) -> Result<Entry, AppError> {
     validate_title(title)?;
     validate_content(content)?;
+    let id = Uuid::now_v7();
 
     sqlx::query_as!(
         Entry,
         r#"
-            INSERT INTO entries (shelf_id, title, content)
-            SELECT $1, $2, $3
+            INSERT INTO entries (id, shelf_id, title, content)
+            SELECT $1, $2, $3, $4
             FROM shelves s
             JOIN workspaces w ON w.id = s.workspace_id
-            WHERE s.id = $1 AND w.user_id = $4
-            RETURNING id, shelf_id, title, content, total_size, created_at, updated_at
+            WHERE s.id = $2 AND w.user_id = $5
+            RETURNING id as "id!: Uuid", shelf_id as "shelf_id!: Uuid", title, content, total_size,
+                created_at as "created_at!: DateTime<Utc>",
+                updated_at as "updated_at: DateTime<Utc>"
         "#,
+        id,
         shelf_id,
         title,
         content,
@@ -206,7 +220,7 @@ pub async fn create(
 }
 
 pub async fn update(
-    pool: &PgPool,
+    pool: &SqlitePool,
     user_id: Uuid,
     id: Uuid,
     title: Option<&[u8]>,
@@ -225,16 +239,19 @@ pub async fn update(
     sqlx::query_as!(
         Entry,
         r#"
-            UPDATE entries e
-            SET title = COALESCE($3, e.title),
-                content = COALESCE($4, e.content)
-            FROM shelves s, workspaces w
-            WHERE e.id = $1
-                AND e.shelf_id = s.id
-                AND s.workspace_id = w.id
-                AND w.user_id = $2
-            RETURNING e.id, e.shelf_id, e.title, e.content, e.total_size,
-                e.created_at, e.updated_at
+            UPDATE entries
+            SET title = COALESCE($3, title),
+                content = COALESCE($4, content)
+            WHERE id = $1
+              AND shelf_id IN (
+                    SELECT s.id
+                    FROM shelves s
+                    JOIN workspaces w ON w.id = s.workspace_id
+                    WHERE w.user_id = $2
+              )
+            RETURNING id as "id!: Uuid", shelf_id as "shelf_id!: Uuid", title, content, total_size,
+                created_at as "created_at!: DateTime<Utc>",
+                updated_at as "updated_at: DateTime<Utc>"
         "#,
         id,
         user_id,
@@ -247,15 +264,17 @@ pub async fn update(
     .ok_or(AppError::NotFound)
 }
 
-pub async fn delete(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
+pub async fn delete(pool: &SqlitePool, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
     let result = sqlx::query!(
         r#"
-            DELETE FROM entries e
-            USING shelves s, workspaces w
-            WHERE e.id = $1
-                AND e.shelf_id = s.id
-                AND s.workspace_id = w.id
-                AND w.user_id = $2
+            DELETE FROM entries
+            WHERE id = $1
+              AND shelf_id IN (
+                    SELECT s.id
+                    FROM shelves s
+                    JOIN workspaces w ON w.id = s.workspace_id
+                    WHERE w.user_id = $2
+              )
         "#,
         id,
         user_id,

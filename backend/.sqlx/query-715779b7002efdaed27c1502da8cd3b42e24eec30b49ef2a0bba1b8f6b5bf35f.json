@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            DELETE FROM entries\n            WHERE id = $1\n              AND shelf_id IN (\n                    SELECT s.id\n                    FROM shelves s\n                    JOIN workspaces w ON w.id = s.workspace_id\n                    WHERE w.user_id = $2\n              )\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "715779b7002efdaed27c1502da8cd3b42e24eec30b49ef2a0bba1b8f6b5bf35f"
+}
