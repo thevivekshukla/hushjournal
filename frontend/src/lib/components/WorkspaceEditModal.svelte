@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Modal from '$lib/components/Modal.svelte';
+	import WorkspaceChangePassphraseModal from '$lib/components/WorkspaceChangePassphraseModal.svelte';
 	import { journal, type Workspace } from '$lib/journal.svelte';
 
 	const NAME_MAX = 255;
@@ -21,6 +22,7 @@
 
 	let error = $state('');
 	let busy = $state(false);
+	let changeOpen = $state(false);
 
 	async function save() {
 		if (!workspace) return;
@@ -89,6 +91,13 @@
 			bind:checked={mask}
 		/>
 	</label>
+	<button
+		type="button"
+		class="btn self-start btn-outline btn-sm"
+		onclick={() => (changeOpen = true)}
+	>
+		Change passphrase
+	</button>
 	{#if error}
 		<p class="text-sm text-error">{error}</p>
 	{/if}
@@ -99,3 +108,5 @@
 		</button>
 	{/snippet}
 </Modal>
+
+<WorkspaceChangePassphraseModal bind:open={changeOpen} {workspace} />

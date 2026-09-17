@@ -135,6 +135,11 @@ pub async fn update(
     {
         return Err(AppError::BadRequest("no fields to update".into()));
     }
+    if key_salt.is_some() != encrypted_dek.is_some() {
+        return Err(AppError::BadRequest(
+            "key_salt and encrypted_dek must be updated together".into(),
+        ));
+    }
     let name = name.map(normalize_name).transpose()?;
     if let Some(key_salt) = key_salt {
         require_bytes_max(key_salt, "key_salt", KEY_SALT_MAX)?;

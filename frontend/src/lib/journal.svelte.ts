@@ -6,7 +6,9 @@ import {
 	CryptoError,
 	decryptText,
 	encryptText,
-	unlockDek
+	equalBytes,
+	unlockDek,
+	wrapDek
 } from '$lib/crypto';
 import { session } from '$lib/session.svelte';
 
@@ -219,15 +221,50 @@ class Journal {
 
 	async updateWorkspace(
 		id: string,
-		patch: { name?: string; passphraseHint?: string; mask?: boolean }
+		patch: {
+			name?: string;
+			passphraseHint?: string;
+			mask?: boolean;
+			keySalt?: string;
+			encryptedDek?: string;
+		}
 	) {
-		const body: { name?: string; passphrase_hint?: string; mask?: boolean } = {};
+		const body: {
+			name?: string;
+			passphrase_hint?: string;
+			mask?: boolean;
+			key_salt?: string;
+			encrypted_dek?: string;
+		} = {};
 		if (patch.name !== undefined) body.name = patch.name;
 		if (patch.passphraseHint !== undefined) body.passphrase_hint = patch.passphraseHint;
 		if (patch.mask !== undefined) body.mask = patch.mask;
+		if (patch.keySalt !== undefined) body.key_salt = patch.keySalt;
+		if (patch.encryptedDek !== undefined) body.encrypted_dek = patch.encryptedDek;
 		const workspace = mapWorkspace(await api.updateWorkspace(id, body));
 		this.workspaces = this.workspaces.map((item) => (item.id === id ? workspace : item));
 		return workspace;
+	}
+
+	async changeWorkspacePassphrase(id: string, currentPassphrase: string, nextPassphrase: string) {
+		const workspace = this.workspace(id);
+		if (!workspace) throw new Error('Workspace not found.');
+		const sessionDek = session.requireDek();
+		const dek = await unlockDek(
+			currentPassphrase,
+			base64ToBytes(workspace.keySalt),
+			base64ToBytes(workspace.encryptedDek)
+		);
+		try {
+			if (!equalBytes(dek, sessionDek)) throw new CryptoError('Wrong passphrase');
+		} finally {
+			dek.fill(0);
+		}
+		const wrapped = await wrapDek(nextPassphrase, sessionDek);
+		return this.updateWorkspace(id, {
+			keySalt: bytesToBase64(wrapped.keySalt),
+			encryptedDek: bytesToBase64(wrapped.encryptedDek)
+		});
 	}
 
 	async unlockWorkspace(workspace: Workspace, passphrase: string) {

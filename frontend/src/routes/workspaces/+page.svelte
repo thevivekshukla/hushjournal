@@ -16,6 +16,7 @@
 	let pendingWorkspaceId = $state<string | null>(null);
 	let newName = $state('');
 	let passphrase = $state('');
+	let passphraseConfirm = $state('');
 	let hint = $state('');
 	let error = $state('');
 	let busy = $state(false);
@@ -70,6 +71,10 @@
 			error = 'Choose a passphrase. It never leaves this device.';
 			return;
 		}
+		if (passphrase !== passphraseConfirm) {
+			error = 'Passphrases do not match.';
+			return;
+		}
 		busy = true;
 		error = '';
 		try {
@@ -77,6 +82,7 @@
 			createOpen = false;
 			newName = '';
 			passphrase = '';
+			passphraseConfirm = '';
 			hint = '';
 			void goto(api.workspace(workspace.id));
 		} catch (cause) {
@@ -90,6 +96,7 @@
 		error = '';
 		newName = '';
 		passphrase = '';
+		passphraseConfirm = '';
 		hint = '';
 		createOpen = true;
 	}
@@ -211,6 +218,18 @@
 			type="password"
 			autocomplete="new-password"
 			bind:value={passphrase}
+		/>
+	</label>
+	<label class="w-full" for="workspace-passphrase-confirm">
+		<span class="mb-1 block text-sm">Confirm passphrase</span>
+		<input
+			id="workspace-passphrase-confirm"
+			name="new-passphrase-confirm"
+			class="input w-full"
+			type="password"
+			autocomplete="new-password"
+			bind:value={passphraseConfirm}
+			onkeydown={(event) => event.key === 'Enter' && !busy && void create()}
 		/>
 	</label>
 	<label class="w-full" for="workspace-passphrase-hint">

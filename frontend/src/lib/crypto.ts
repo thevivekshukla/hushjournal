@@ -59,15 +59,28 @@ export function decryptText(key: Uint8Array, blob: Uint8Array, purpose: Purpose)
 	return decoder.decode(decryptBytes(key, blob, purpose));
 }
 
-export async function createWorkspaceSecrets(passphrase: string) {
-	const dek = randomBytes(DEK_LEN);
+export async function wrapDek(passphrase: string, dek: Uint8Array) {
+	if (dek.length !== DEK_LEN) throw new CryptoError();
 	const keySalt = randomBytes(SALT_LEN);
 	const kek = await deriveKek(passphrase, keySalt);
 	try {
-		return { dek, keySalt, encryptedDek: encryptBytes(kek, dek, 'dek') };
+		return { keySalt, encryptedDek: encryptBytes(kek, dek, 'dek') };
 	} finally {
 		kek.fill(0);
 	}
+}
+
+export async function createWorkspaceSecrets(passphrase: string) {
+	const dek = randomBytes(DEK_LEN);
+	const wrapped = await wrapDek(passphrase, dek);
+	return { dek, ...wrapped };
+}
+
+export function equalBytes(a: Uint8Array, b: Uint8Array) {
+	if (a.length !== b.length) return false;
+	let diff = 0;
+	for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+	return diff === 0;
 }
 
 export async function unlockDek(

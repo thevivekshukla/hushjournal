@@ -1,13 +1,11 @@
 use anyhow::Context;
 use axum::extract::State;
-use axum::http::{Method, header};
 use axum::routing::get;
 use axum::{Json, Router};
 use db::AppState;
 use errors::AppError;
 use serde::Serialize;
 use tokio::net::TcpListener;
-use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -50,24 +48,10 @@ async fn main() -> anyhow::Result<()> {
 }
 
 fn router(state: AppState) -> Router {
-    let cors = CorsLayer::new()
-        .allow_origin(AllowOrigin::mirror_request())
-        .allow_methods([
-            Method::GET,
-            Method::POST,
-            Method::PUT,
-            Method::PATCH,
-            Method::DELETE,
-            Method::OPTIONS,
-        ])
-        .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE])
-        .allow_credentials(true);
-
     Router::new()
         .route("/health", get(health))
         .nest("/api", user_json::router().merge(workspace_json::router()))
         .layer(TraceLayer::new_for_http())
-        .layer(cors)
         .with_state(state)
 }
 

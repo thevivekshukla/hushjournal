@@ -81,7 +81,13 @@ export const createWorkspace = (body: {
 	});
 export const updateWorkspace = (
 	id: string,
-	body: { name?: string; passphrase_hint?: string; mask?: boolean }
+	body: {
+		name?: string;
+		passphrase_hint?: string;
+		mask?: boolean;
+		key_salt?: string;
+		encrypted_dek?: string;
+	}
 ) =>
 	apiFetch<ApiWorkspace>(workspaceItem(id), {
 		method: 'PATCH',

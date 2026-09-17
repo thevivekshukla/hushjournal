@@ -31,6 +31,7 @@ backend/
 - Default API bind: `127.0.0.1:8000` (`HOST` / `PORT`). Do not change the default port to 3000.
 - `GOOGLE_LOGIN_OAUTH2` is required: `client_id,client_secret` (comma-separated, first comma splits). `GOOGLE_OAUTH_REDIRECT_URI` is required and must match the Google Cloud OAuth client redirect URI (for local: `http://127.0.0.1:8000/api/auth/google/callback`).
 - Google OAuth is the authorization-code flow. Start at `GET /api/auth/google` (optional `next` query, relative path only), callback at `GET /api/auth/google/callback`. After login, redirect to `next` or `/workspaces`. `APP_ORIGIN` (optional, e.g. `http://127.0.0.1:5173`) prefixes that path so the SPA receives the session; omit it when the app is served from the API origin. Never log OAuth codes, tokens, or client secrets.
+- Do not add CORS. The SPA is same-origin: Vite proxies `/api` in development, and production will rewrite or serve the SPA from the API. `APP_ORIGIN` is only for the OAuth redirect, not a CORS allowlist. Cross-origin browsers must not be able to call the API.
 
 ## Postgres
 
@@ -86,5 +87,6 @@ frontend/
 - `pnpm dev` from `frontend/` (Vite, default 5173). `/api` is proxied to `http://127.0.0.1:8000`.
 - Themes: DaisyUI `silk` (light) and `dim` (dark). Persist the choice in `localStorage` as `theme`.
 - The SPA talks to the REST API through the Vite `/api` proxy. Encrypt shelf names, entry titles, and entry content with AES-256-GCM-SIV on the client before upload. Never send the workspace passphrase or plaintext journal content to the API. Keep the unwrapped DEK in memory only.
+- Changing a workspace passphrase re-wraps the existing DEK on the client with a new salt and PATCHes `key_salt` and `encrypted_dek` together. Do not rotate the DEK or re-encrypt notes. The server must not see the old or new passphrase.
 - Default new-entry title is today's date: `7 Sep 2026`.
 - Use bits-ui for dialogs, dropdowns, and other focus-trap widgets. Use DaisyUI classes for visual styling. Prefer Iconify `icon-[lucide--…]` classes over per-icon Svelte packages.
