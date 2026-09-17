@@ -34,12 +34,10 @@
 	const workspaceId = $derived(page.params.workspaceId ?? '');
 	const workspace = $derived(journal.workspace(workspaceId));
 	const shelves = $derived(journal.shelvesFor(workspaceId));
-	const selectedShelf = $derived(
-		shelves.find((shelf) => shelf.id === selectedShelfId) ?? shelves[0]
-	);
+	const selectedShelf = $derived(shelves.find((shelf) => shelf.id === selectedShelfId) ?? null);
 	const entries = $derived(selectedShelf ? journal.entriesFor(selectedShelf.id) : []);
 	const selectedEntry = $derived(
-		entries.find((entry) => entry.id === selectedEntryId) ?? entries[0] ?? null
+		selectedEntryId ? (entries.find((entry) => entry.id === selectedEntryId) ?? null) : null
 	);
 	const maskOn = $derived(workspace?.mask === true);
 
@@ -189,7 +187,7 @@
 		if (!editingShelfId) return;
 		busy = true;
 		try {
-			if (selectedShelfId === editingShelfId || selectedShelf?.id === editingShelfId) {
+			if (selectedShelfId === editingShelfId) {
 				selectedShelfId = null;
 				selectedEntryId = null;
 			}
@@ -436,10 +434,14 @@
 						</button>
 					{:else}
 						<p class="px-3 py-8 text-sm text-base-content/60">
-							No entries yet. Press <kbd class="kbd kbd-sm">n</kbd> or Note.
+							{#if selectedShelf}
+								No entries yet. Press <kbd class="kbd kbd-sm">n</kbd> or Note.
+							{:else}
+								Pick a shelf to see notes.
+							{/if}
 						</p>
 					{/each}
-					{#if journal.hasMore}
+					{#if selectedShelf && journal.hasMore}
 						<div
 							class="flex h-8 items-center justify-center"
 							{@attach loadMoreSentinel(`${selectedShelf?.id ?? ''}:${entries.length}`)}
@@ -465,15 +467,19 @@
 				{:else}
 					<div class="flex flex-1 flex-col items-center justify-center px-6 text-center">
 						<span class="icon-[lucide--pen-line] size-8 text-base-content/30"></span>
-						<p class="mt-3 font-serif text-xl">Pick an entry, or start today’s page.</p>
-						<button
-							type="button"
-							class="btn mt-4 rounded-full btn-neutral"
-							onclick={() => void writeToday()}
-							disabled={!selectedShelf || busy}
-						>
-							Write today
-						</button>
+						{#if selectedShelf}
+							<p class="mt-3 font-serif text-xl">Pick an entry, or start today’s page.</p>
+							<button
+								type="button"
+								class="btn mt-4 rounded-full btn-neutral"
+								onclick={() => void writeToday()}
+								disabled={busy}
+							>
+								Write today
+							</button>
+						{:else}
+							<p class="mt-3 font-serif text-xl">Pick a shelf to see notes.</p>
+						{/if}
 					</div>
 				{/if}
 			</main>
