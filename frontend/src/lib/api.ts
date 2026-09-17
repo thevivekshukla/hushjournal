@@ -33,6 +33,8 @@ export type ApiWorkspace = {
 	encrypted_dek: string;
 	passphrase_hint: string | null;
 	mask: boolean;
+	total_workspace_size: number;
+	size_last_calculated_at: string | null;
 	created_at: string;
 	updated_at: string | null;
 };
@@ -42,6 +44,8 @@ export type ApiShelf = {
 	workspace_id: string;
 	name: string;
 	icon: string | null;
+	total_shelf_size: number;
+	size_last_calculated_at: string | null;
 	created_at: string;
 	updated_at: string | null;
 };

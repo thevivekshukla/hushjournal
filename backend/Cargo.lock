@@ -402,6 +402,7 @@ dependencies = [
  "tracing-subscriber",
  "user_json",
  "utils",
+ "workspace",
  "workspace_json",
 ]
 

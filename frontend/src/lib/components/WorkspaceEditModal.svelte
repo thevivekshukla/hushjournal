@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Modal from '$lib/components/Modal.svelte';
 	import WorkspaceChangePassphraseModal from '$lib/components/WorkspaceChangePassphraseModal.svelte';
-	import { journal, type Workspace } from '$lib/journal.svelte';
+	import { formatBytes, journal, type Workspace } from '$lib/journal.svelte';
 
 	const NAME_MAX = 255;
 	const HINT_MAX = 255;
@@ -98,6 +98,16 @@
 	>
 		Change passphrase
 	</button>
+	{#if workspace}
+		<p class="text-sm text-base-content/70">
+			<span class="mb-1 block text-sm text-base-content">Stored size</span>
+			{#if workspace.sizeLastCalculatedAt}
+				{formatBytes(workspace.totalSize)}
+			{:else}
+				Not calculated yet
+			{/if}
+		</p>
+	{/if}
 	{#if error}
 		<p class="text-sm text-error">{error}</p>
 	{/if}

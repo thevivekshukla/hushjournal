@@ -32,6 +32,7 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
     tokio::spawn(db::pgstore_cleanup(state.db.clone()));
+    tokio::spawn(size_cron(state.db.clone()));
 
     let listener = TcpListener::bind(config.bind_addr())
         .await
@@ -45,6 +46,22 @@ async fn main() -> anyhow::Result<()> {
         .context("server error")?;
 
     Ok(())
+}
+
+async fn size_cron(pool: sqlx::PgPool) {
+    loop {
+        match workspace::sizes::recalculate_stale_shelf_sizes(&pool).await {
+            Ok(n) if n > 0 => tracing::info!(shelves = n, "recalculated shelf sizes"),
+            Ok(_) => {}
+            Err(err) => tracing::warn!(error = %err, "shelf size cron failed"),
+        }
+        match workspace::sizes::recalculate_stale_workspace_sizes(&pool).await {
+            Ok(n) if n > 0 => tracing::info!(workspaces = n, "recalculated workspace sizes"),
+            Ok(_) => {}
+            Err(err) => tracing::warn!(error = %err, "workspace size cron failed"),
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+    }
 }
 
 fn router(state: AppState) -> Router {

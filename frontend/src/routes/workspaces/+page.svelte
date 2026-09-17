@@ -232,6 +232,9 @@
 			onkeydown={(event) => event.key === 'Enter' && !busy && void create()}
 		/>
 	</label>
+	<p class="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+		If you forget this passphrase, the content of this workspace cannot be recovered.
+	</p>
 	<label class="w-full" for="workspace-passphrase-hint">
 		<span class="mb-1 block text-sm">Passphrase hint (optional)</span>
 		<input

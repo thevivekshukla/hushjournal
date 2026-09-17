@@ -8,7 +8,7 @@
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import UserMenu from '$lib/components/UserMenu.svelte';
 	import WorkspaceEditModal from '$lib/components/WorkspaceEditModal.svelte';
-	import { SHELF_ICONS, formatEntryDate, journal, type Shelf } from '$lib/journal.svelte';
+	import { SHELF_ICONS, formatBytes, formatEntryDate, journal, type Shelf } from '$lib/journal.svelte';
 	import { session } from '$lib/session.svelte';
 	import { untrack } from 'svelte';
 	import type { Attachment } from 'svelte/attachments';
@@ -34,6 +34,7 @@
 	const workspaceId = $derived(page.params.workspaceId ?? '');
 	const workspace = $derived(journal.workspace(workspaceId));
 	const shelves = $derived(journal.shelvesFor(workspaceId));
+	const editingShelf = $derived(shelves.find((shelf) => shelf.id === editingShelfId) ?? null);
 	const selectedShelf = $derived(shelves.find((shelf) => shelf.id === selectedShelfId) ?? null);
 	const entries = $derived(selectedShelf ? journal.entriesFor(selectedShelf.id) : []);
 	const selectedEntry = $derived(
@@ -571,6 +572,16 @@
 			</div>
 		</div>
 	</form>
+	{#if editingShelf}
+		<p class="text-sm text-base-content/70">
+			<span class="mb-1 block text-sm text-base-content">Stored size</span>
+			{#if editingShelf.sizeLastCalculatedAt}
+				{formatBytes(editingShelf.totalSize)}
+			{:else}
+				Not calculated yet
+			{/if}
+		</p>
+	{/if}
 	{#snippet footer()}
 		<button type="button" class="btn mr-auto btn-error" onclick={requestDeleteShelf}>
 			Delete

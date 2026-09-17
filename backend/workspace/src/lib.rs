@@ -1,6 +1,7 @@
 mod bytes;
 pub mod entries;
 pub mod shelves;
+pub mod sizes;
 pub mod workspaces;
 
 pub use bytes::{b64, b64_opt};

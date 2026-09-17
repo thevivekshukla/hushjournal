@@ -19,6 +19,8 @@ export type Workspace = {
 	encryptedDek: string;
 	passphraseHint: string | null;
 	mask: boolean;
+	totalSize: number;
+	sizeLastCalculatedAt: string | null;
 };
 
 export type Shelf = {
@@ -26,6 +28,8 @@ export type Shelf = {
 	workspaceId: string;
 	name: string;
 	icon: string;
+	totalSize: number;
+	sizeLastCalculatedAt: string | null;
 };
 
 export type SaveStatus = 'saved' | 'saving' | 'error';
@@ -67,6 +71,12 @@ export function formatEntryDate(date = new Date()) {
 	return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 }
 
+export function formatBytes(bytes: number) {
+	if (bytes < 1024) return `${bytes} B`;
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function shelfIcon(icon: string | null): string {
 	return icon && (SHELF_ICONS as readonly string[]).includes(icon) ? icon : SHELF_ICONS[0];
 }
@@ -78,7 +88,9 @@ function mapWorkspace(row: api.ApiWorkspace): Workspace {
 		keySalt: row.key_salt,
 		encryptedDek: row.encrypted_dek,
 		passphraseHint: row.passphrase_hint,
-		mask: row.mask ?? false
+		mask: row.mask ?? false,
+		totalSize: row.total_workspace_size ?? 0,
+		sizeLastCalculatedAt: row.size_last_calculated_at
 	};
 }
 
@@ -93,7 +105,9 @@ function mapShelf(row: api.ApiShelf, dek: Uint8Array): Shelf {
 		id: row.id,
 		workspaceId: row.workspace_id,
 		name,
-		icon: shelfIcon(row.icon)
+		icon: shelfIcon(row.icon),
+		totalSize: row.total_shelf_size ?? 0,
+		sizeLastCalculatedAt: row.size_last_calculated_at
 	};
 }
 

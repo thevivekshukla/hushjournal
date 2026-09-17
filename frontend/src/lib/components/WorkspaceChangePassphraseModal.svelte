@@ -100,6 +100,9 @@
 			onkeydown={(event) => event.key === 'Enter' && !busy && void save()}
 		/>
 	</label>
+	<p class="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+		If you forget this passphrase, the content of this workspace cannot be recovered.
+	</p>
 	{#if error}
 		<p class="text-sm text-error">{error}</p>
 	{/if}
