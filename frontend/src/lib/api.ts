@@ -9,6 +9,8 @@ export const google = (next?: string) =>
 	next ? `/api/auth/google?next=${encodeURIComponent(next)}` : '/api/auth/google';
 export const googleCallback = () => '/api/auth/google/callback';
 export const logout = () => '/api/auth/logout';
+export const passwordLogin = () => '/api/auth/login';
+export const passwordSignup = () => '/api/auth/signup';
 export const user = () => '/api/user';
 export const workspaceCollection = () => '/api/workspaces';
 export const workspaceItem = (id: string) => `/api/workspaces/${id}`;
@@ -20,6 +22,7 @@ export const entry = (id: string) => `/api/entries/${id}`;
 export type ApiUser = {
 	id: string;
 	name: string;
+	username: string | null;
 	email: string | null;
 	google_email: string | null;
 	google_avatar_url: string | null;
@@ -71,6 +74,16 @@ export type ApiEntryPage = {
 
 export const getUser = () => apiFetch<ApiUser>(user());
 export const logoutUser = () => apiFetch<void>(logout(), { method: 'POST' });
+export const loginWithPassword = (body: { username: string; password: string }) =>
+	apiFetch<ApiUser>(passwordLogin(), {
+		method: 'POST',
+		body: JSON.stringify(body)
+	});
+export const signupWithPassword = (body: { username: string; password: string }) =>
+	apiFetch<ApiUser>(passwordSignup(), {
+		method: 'POST',
+		body: JSON.stringify(body)
+	});
 
 export const listWorkspaces = () => apiFetch<ApiWorkspace[]>(workspaceCollection());
 export const createWorkspace = (body: {

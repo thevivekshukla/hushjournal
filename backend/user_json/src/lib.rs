@@ -17,8 +17,16 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/auth/google", get(google_login))
         .route("/auth/google/callback", get(google_callback))
+        .route("/auth/login", post(password_login))
+        .route("/auth/signup", post(password_signup))
         .route("/auth/logout", post(logout))
         .route("/user", get(me).patch(update_me).delete(delete_me))
+}
+
+#[derive(Deserialize)]
+struct PasswordAuth {
+    username: String,
+    password: String,
 }
 
 #[derive(Deserialize)]
@@ -101,6 +109,42 @@ async fn google_callback(
 
     let jar = with_session_cookie(jar, &session, state.cookie_secure);
     Ok((jar, Redirect::to(&app_redirect(&state.app_origin, &next))).into_response())
+}
+
+async fn password_login(
+    State(state): State<AppState>,
+    jar: CookieJar,
+    mut session: Session,
+    Json(body): Json<PasswordAuth>,
+) -> Result<impl IntoResponse, AppError> {
+    let user = user::login_with_password(&state.db, &body.username, &body.password).await?;
+    session.attach(&state.db, "user_id", &user.id).await?;
+    tracing::info!(user_id = %user.id, "user logged in with password");
+    Ok((
+        with_session_cookie(jar, &session, state.cookie_secure),
+        Json(user),
+    ))
+}
+
+async fn password_signup(
+    State(state): State<AppState>,
+    jar: CookieJar,
+    mut session: Session,
+    Json(body): Json<PasswordAuth>,
+) -> Result<impl IntoResponse, AppError> {
+    let user = match user::signup_with_password(&state.db, &body.username, &body.password).await {
+        Ok(user) => user,
+        Err(AppError::Conflict) => {
+            return Err(AppError::BadRequest("username is taken".into()));
+        }
+        Err(err) => return Err(err),
+    };
+    session.attach(&state.db, "user_id", &user.id).await?;
+    tracing::info!(user_id = %user.id, "user signed up with password");
+    Ok((
+        with_session_cookie(jar, &session, state.cookie_secure),
+        Json(user),
+    ))
 }
 
 async fn logout(

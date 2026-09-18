@@ -18,6 +18,7 @@ edition = "2024"
 
 [workspace.dependencies]
 anyhow = "1.0.104"
+argon2 = { version = "0.5", features = ["std"] }
 axum = "0.8.9"
 axum-extra = { version = "0.12", features = ["cookie"] }
 base64 = "0.22"

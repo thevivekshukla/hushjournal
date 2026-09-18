@@ -2,11 +2,71 @@
 	import { goto } from '$app/navigation';
 	import * as api from '$lib/api';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+	import { ApiError } from '$lib/http';
 	import { session } from '$lib/session.svelte';
+
+	let tab = $state<'signin' | 'signup'>('signin');
+	let username = $state('');
+	let password = $state('');
+	let showPassword = $state(false);
+	let busy = $state(false);
+	let error = $state('');
 
 	$effect(() => {
 		if (session.user) void goto(api.workspaces());
 	});
+
+	function selectTab(next: 'signin' | 'signup') {
+		tab = next;
+		error = '';
+	}
+
+	function messageFrom(cause: unknown, fallback: string) {
+		if (cause instanceof ApiError || cause instanceof Error) return cause.message;
+		return fallback;
+	}
+
+	async function signIn(event: SubmitEvent) {
+		event.preventDefault();
+		const form = event.currentTarget;
+		if (!(form instanceof HTMLFormElement)) return;
+		const data = new FormData(form);
+		busy = true;
+		error = '';
+		try {
+			const user = await api.loginWithPassword({
+				username: String(data.get('username') ?? '').trim(),
+				password: String(data.get('password') ?? '')
+			});
+			session.setUser(user);
+			await goto(api.workspaces());
+		} catch (cause) {
+			error = messageFrom(cause, 'Could not sign in.');
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function signUp(event: SubmitEvent) {
+		event.preventDefault();
+		const form = event.currentTarget;
+		if (!(form instanceof HTMLFormElement)) return;
+		const data = new FormData(form);
+		busy = true;
+		error = '';
+		try {
+			const user = await api.signupWithPassword({
+				username: String(data.get('username') ?? '').trim(),
+				password: String(data.get('new-password') ?? '')
+			});
+			session.setUser(user);
+			await goto(api.workspaces());
+		} catch (cause) {
+			error = messageFrom(cause, 'Could not sign up.');
+		} finally {
+			busy = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -55,8 +115,129 @@
 				</svg>
 				Continue with Google
 			</a>
+			<div class="divider">or</div>
+			<div class="text-left">
+				<div class="tabs tabs-box grid w-full grid-cols-2" role="tablist">
+					<button
+						type="button"
+						role="tab"
+						class={['tab', 'w-full', tab === 'signin' && 'tab-active']}
+						aria-selected={tab === 'signin'}
+						onclick={() => selectTab('signin')}
+					>
+						Sign in
+					</button>
+					<button
+						type="button"
+						role="tab"
+						class={['tab', 'w-full', tab === 'signup' && 'tab-active']}
+						aria-selected={tab === 'signup'}
+						onclick={() => selectTab('signup')}
+					>
+						Sign up
+					</button>
+				</div>
+				{#if tab === 'signin'}
+					<form class="mt-4 flex flex-col gap-3" onsubmit={(event) => void signIn(event)}>
+						<label class="w-full" for="username">
+							<span class="mb-1 block text-sm">Username</span>
+							<input
+								id="username"
+								name="username"
+								class="input w-full"
+								type="text"
+								autocomplete="username"
+								required
+								minlength={3}
+								maxlength={32}
+								autocapitalize="none"
+								spellcheck={false}
+								enterkeyhint="next"
+								bind:value={username}
+							/>
+						</label>
+						<div class="w-full">
+							<div class="mb-1 flex items-center justify-between">
+								<label class="text-sm" for="current-password">Password</label>
+								<button
+									type="button"
+									class="text-xs text-base-content/50"
+									onclick={() => (showPassword = !showPassword)}
+								>
+									{showPassword ? 'Hide' : 'Show'}
+								</button>
+							</div>
+							<input
+								id="current-password"
+								name="password"
+								class="input w-full"
+								type={showPassword ? 'text' : 'password'}
+								autocomplete="current-password"
+								required
+								minlength={8}
+								maxlength={128}
+								enterkeyhint="done"
+								bind:value={password}
+							/>
+						</div>
+						{#if error}
+							<p class="text-sm text-error">{error}</p>
+						{/if}
+						<button type="submit" class="btn w-full btn-neutral" disabled={busy}>Sign in</button>
+					</form>
+				{:else}
+					<form class="mt-4 flex flex-col gap-3" onsubmit={(event) => void signUp(event)}>
+						<label class="w-full" for="username-signup">
+							<span class="mb-1 block text-sm">Username</span>
+							<input
+								id="username-signup"
+								name="username"
+								class="input w-full"
+								type="text"
+								autocomplete="username"
+								required
+								minlength={3}
+								maxlength={32}
+								autocapitalize="none"
+								spellcheck={false}
+								enterkeyhint="next"
+								bind:value={username}
+							/>
+						</label>
+						<div class="w-full">
+							<div class="mb-1 flex items-center justify-between">
+								<label class="text-sm" for="new-password">Password</label>
+								<button
+									type="button"
+									class="text-xs text-base-content/50"
+									onclick={() => (showPassword = !showPassword)}
+								>
+									{showPassword ? 'Hide' : 'Show'}
+								</button>
+							</div>
+							<input
+								id="new-password"
+								name="new-password"
+								class="input w-full"
+								type={showPassword ? 'text' : 'password'}
+								autocomplete="new-password"
+								required
+								minlength={8}
+								maxlength={128}
+								enterkeyhint="done"
+								bind:value={password}
+							/>
+						</div>
+						{#if error}
+							<p class="text-sm text-error">{error}</p>
+						{/if}
+						<button type="submit" class="btn w-full btn-neutral" disabled={busy}>Sign up</button>
+					</form>
+				{/if}
+			</div>
 			<p class="mt-4 text-xs text-base-content/50">
-				Sign-in uses Google. Your passphrase never leaves this device.
+				Sign in with Google or a username and password. Your workspace passphrase never leaves this
+				device.
 			</p>
 		</div>
 	</main>

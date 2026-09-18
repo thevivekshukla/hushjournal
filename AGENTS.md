@@ -2,7 +2,7 @@
 
 End-to-end encrypted journal. The client encrypts with AES-256-GCM-SIV. The server stores ciphertext only and must never see, log, or decrypt user content.
 
-Users sign in with Google OAuth2. A user has many Workspaces; a Workspace has one or more Shelves; a Shelf has many entries. An entry is encrypted `title` and encrypted `content`. New-entry titles default to today's date in this form: `7 Sep 2026` (set and encrypted on the client). Shelf `name` is also ciphertext.
+Users sign in with Google OAuth2 or a username and password. A user has many Workspaces; a Workspace has one or more Shelves; a Shelf has many entries. An entry is encrypted `title` and encrypted `content`. New-entry titles default to today's date in this form: `7 Sep 2026` (set and encrypted on the client). Shelf `name` is also ciphertext.
 
 Crypto material lives on the workspace, not the user: `key_salt` and `encrypted_dek`. The server stores these as opaque blobs and must never try to unwrap them. Shelf rows belong to a workspace (`workspace_id`); entry rows belong to a shelf (`shelf_id`). Do not store plaintext for `workspaces.key_salt`, `workspaces.encrypted_dek`, `shelves.name`, `entries.title`, or `entries.content`. `workspaces.passphrase_hint` is optional plaintext (max 255 chars) so it can be shown before unlock; empty PATCH value clears it. `workspaces.mask` is a plaintext boolean (default false): when true, the client hides inactive shelf names (icons stay) and inactive entry titles.
 
@@ -61,7 +61,7 @@ updated_at DATETIME
 - Auth is cookie sessions, not bearer tokens. Put a random session id in an HttpOnly `session` cookie; never store the raw id. SHA-256 the id and use that digest as the `KvStore` key (`session:<hex>`).
 - Attach `user_id` and other session values with `Session::attach` / `Session::remove`. After `attach` on a new session, send `Set-Cookie` via `Session::cookie(cookie_secure)` (`COOKIE_SECURE`, default false on localhost). On logout / account delete, destroy the session and send `Session::removal_cookie(cookie_secure)`.
 - Handlers extract `utils::Session` (optional login) or `utils::UserId` (required login, 401 if missing) through `FromRequestParts`. Do not read the raw cookie in handlers.
-- Google login upserts by `google_account_id` (create if missing, update `google_email` / `google_avatar_url` / `last_login_at` on repeat login). Do not overwrite a user-edited `name` on subsequent Google logins. Inactive users (`is_active = false`) must not be signed in. `DELETE /api/user` deletes the `users` row (workspaces/shelves/entries cascade). Profile edit (`PATCH /api/user`) may change `name` only for now.
+- Google login upserts by `google_account_id` (create if missing, update `google_email` / `google_avatar_url` / `last_login_at` on repeat login). Do not overwrite a user-edited `name` on subsequent Google logins. Username/password signup is `POST /auth/signup` `{ username, password }`; login is `POST /auth/login` with the same body. Usernames are unique (stored lowercase, 3–32 `[a-z][a-z0-9_]*`). Hash passwords with Argon2id into `users.password_hash`; never return or log the password or hash. Google-only rows may have null `username` / `password_hash`. Inactive users (`is_active = false`) must not be signed in. `DELETE /api/user` deletes the `users` row (workspaces/shelves/entries cascade). Profile edit (`PATCH /api/user`) may change `name` only for now.
 
 ## Product constraints
 
@@ -85,7 +85,7 @@ frontend/
 ```
 
 - Use pnpm for all frontend package manager commands (`pnpm install`, `pnpm add`, `pnpm dev`, `pnpm check`). Do not use npm or yarn. Keep `pnpm-lock.yaml`; do not add `package-lock.json`.
-- `pnpm dev` from `frontend/` (Vite, default 5173). `/api` is proxied to `http://127.0.0.1:8000`. Production: `just build` from `backend/` embeds `frontend/build` into the API binary. `/` always redirects to `/login` (SvelteKit `load` in dev; Axum `GET /` in production).
+- `pnpm dev` from `frontend/` (Vite, default 5173). `/api` is proxied to `http://127.0.0.1:8000`. Production: `just build` from `backend/` embeds `frontend/build` into the API binary. `/` always redirects to `/login` (SvelteKit `load` in dev; Axum `GET /` in production). The login page has Google OAuth plus username/password Sign in and Sign up tabs.
 - Themes: DaisyUI `silk` (light) and `dim` (dark). Persist the choice in `localStorage` as `theme`.
 - The SPA talks to the REST API through the Vite `/api` proxy. Encrypt shelf names, entry titles, and entry content with AES-256-GCM-SIV on the client before upload. Never send the workspace passphrase or plaintext journal content to the API. Keep the unwrapped DEK in memory only.
 - Changing a workspace passphrase re-wraps the existing DEK on the client with a new salt and PATCHes `key_salt` and `encrypted_dek` together. Do not rotate the DEK or re-encrypt notes. The server must not see the old or new passphrase.

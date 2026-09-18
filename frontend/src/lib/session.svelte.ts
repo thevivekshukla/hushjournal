@@ -13,7 +13,7 @@ function mapUser(user: api.ApiUser): User {
 	return {
 		id: user.id,
 		name: user.name,
-		email: user.email ?? user.google_email ?? '',
+		email: user.email ?? user.google_email ?? user.username ?? '',
 		avatarUrl: user.google_avatar_url
 	};
 }
@@ -46,6 +46,12 @@ class Session {
 		} finally {
 			this.ready = true;
 		}
+	}
+
+	setUser(user: api.ApiUser) {
+		this.user = mapUser(user);
+		this.ready = true;
+		this.loadError = null;
 	}
 
 	unlock(workspaceId: string, dek: Uint8Array) {

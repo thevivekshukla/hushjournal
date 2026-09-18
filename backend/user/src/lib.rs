@@ -1,15 +1,24 @@
+mod password;
+
 use chrono::{DateTime, Utc};
 use errors::AppError;
 use serde::Serialize;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
+pub use password::{login_with_password, signup_with_password};
+
 pub const MAX_NAME_LEN: usize = 255;
+pub const MAX_USERNAME_LEN: usize = 32;
+pub const MIN_USERNAME_LEN: usize = 3;
+pub const MIN_PASSWORD_LEN: usize = 8;
+pub const MAX_PASSWORD_LEN: usize = 128;
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct User {
     pub id: Uuid,
     pub name: String,
+    pub username: Option<String>,
     pub email: Option<String>,
     pub is_email_verified: bool,
     pub email_verified_at: Option<DateTime<Utc>>,
@@ -93,7 +102,7 @@ pub async fn update_name(pool: &SqlitePool, id: Uuid, name: &str) -> Result<User
             UPDATE users
             SET name = $2
             WHERE id = $1
-            RETURNING id as "id!: Uuid", name, email,
+            RETURNING id as "id!: Uuid", name, username, email,
                 is_email_verified as "is_email_verified!: bool",
                 email_verified_at as "email_verified_at: DateTime<Utc>",
                 google_email, google_account_id, google_avatar_url,
@@ -127,7 +136,7 @@ async fn get_by_id_unchecked(pool: &SqlitePool, id: Uuid) -> Result<Option<User>
     sqlx::query_as!(
         User,
         r#"
-            SELECT id as "id!: Uuid", name, email,
+            SELECT id as "id!: Uuid", name, username, email,
                 is_email_verified as "is_email_verified!: bool",
                 email_verified_at as "email_verified_at: DateTime<Utc>",
                 google_email, google_account_id, google_avatar_url,
@@ -152,7 +161,7 @@ async fn get_by_google_account_id(
     sqlx::query_as!(
         User,
         r#"
-            SELECT id as "id!: Uuid", name, email,
+            SELECT id as "id!: Uuid", name, username, email,
                 is_email_verified as "is_email_verified!: bool",
                 email_verified_at as "email_verified_at: DateTime<Utc>",
                 google_email, google_account_id, google_avatar_url,
@@ -181,7 +190,7 @@ async fn insert_google_user(pool: &SqlitePool, account: &GoogleAccount) -> Resul
                 google_email, google_account_id, google_avatar_url, last_login_at
             )
             VALUES ($1, $2, $3, $4, CASE WHEN $4 THEN unixepoch() ELSE NULL END, $5, $6, $7, unixepoch())
-            RETURNING id as "id!: Uuid", name, email,
+            RETURNING id as "id!: Uuid", name, username, email,
                 is_email_verified as "is_email_verified!: bool",
                 email_verified_at as "email_verified_at: DateTime<Utc>",
                 google_email, google_account_id, google_avatar_url,
@@ -214,7 +223,7 @@ async fn update_google_login(
             UPDATE users
             SET google_email = $2, google_avatar_url = $3, last_login_at = unixepoch()
             WHERE id = $1
-            RETURNING id as "id!: Uuid", name, email,
+            RETURNING id as "id!: Uuid", name, username, email,
                 is_email_verified as "is_email_verified!: bool",
                 email_verified_at as "email_verified_at: DateTime<Utc>",
                 google_email, google_account_id, google_avatar_url,
@@ -232,7 +241,7 @@ async fn update_google_login(
     .map_err(map_db)
 }
 
-fn require_active(user: &User) -> Result<(), AppError> {
+pub(crate) fn require_active(user: &User) -> Result<(), AppError> {
     if user.is_active {
         Ok(())
     } else {
@@ -240,7 +249,7 @@ fn require_active(user: &User) -> Result<(), AppError> {
     }
 }
 
-fn map_db(err: sqlx::Error) -> AppError {
+pub(crate) fn map_db(err: sqlx::Error) -> AppError {
     if let sqlx::Error::Database(db_err) = &err
         && db_err.is_unique_violation()
     {
