@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use errors::AppError;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -32,6 +32,7 @@ pub struct Entry {
     #[serde(with = "crate::b64")]
     pub content: Vec<u8>,
     pub total_size: i64,
+    pub entry_date: NaiveDate,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -43,6 +44,7 @@ pub struct EntrySummary {
     #[serde(with = "crate::b64")]
     pub title: Vec<u8>,
     pub total_size: i64,
+    pub entry_date: NaiveDate,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -82,7 +84,7 @@ pub async fn list(
         (ListOrder::Desc, None) => sqlx::query_as!(
             EntrySummary,
             r#"
-                SELECT id, shelf_id, title, total_size, created_at, updated_at
+                SELECT id, shelf_id, title, total_size, entry_date, created_at, updated_at
                 FROM entries
                 WHERE shelf_id = $1
                 ORDER BY id DESC
@@ -97,7 +99,7 @@ pub async fn list(
         (ListOrder::Desc, Some(cursor)) => sqlx::query_as!(
             EntrySummary,
             r#"
-                SELECT id, shelf_id, title, total_size, created_at, updated_at
+                SELECT id, shelf_id, title, total_size, entry_date, created_at, updated_at
                 FROM entries
                 WHERE shelf_id = $1 AND id < $2
                 ORDER BY id DESC
@@ -113,7 +115,7 @@ pub async fn list(
         (ListOrder::Asc, None) => sqlx::query_as!(
             EntrySummary,
             r#"
-                SELECT id, shelf_id, title, total_size, created_at, updated_at
+                SELECT id, shelf_id, title, total_size, entry_date, created_at, updated_at
                 FROM entries
                 WHERE shelf_id = $1
                 ORDER BY id ASC
@@ -128,7 +130,7 @@ pub async fn list(
         (ListOrder::Asc, Some(cursor)) => sqlx::query_as!(
             EntrySummary,
             r#"
-                SELECT id, shelf_id, title, total_size, created_at, updated_at
+                SELECT id, shelf_id, title, total_size, entry_date, created_at, updated_at
                 FROM entries
                 WHERE shelf_id = $1 AND id > $2
                 ORDER BY id ASC
@@ -158,7 +160,7 @@ pub async fn get(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Entry, AppErr
     sqlx::query_as!(
         Entry,
         r#"
-            SELECT e.id, e.shelf_id, e.title, e.content, e.total_size,
+            SELECT e.id, e.shelf_id, e.title, e.content, e.total_size, e.entry_date,
                 e.created_at, e.updated_at
             FROM entries e
             JOIN shelves s ON s.id = e.shelf_id
@@ -180,6 +182,7 @@ pub async fn create(
     shelf_id: Uuid,
     title: &[u8],
     content: &[u8],
+    entry_date: Option<NaiveDate>,
 ) -> Result<Entry, AppError> {
     validate_title(title)?;
     validate_content(content)?;
@@ -187,16 +190,17 @@ pub async fn create(
     sqlx::query_as!(
         Entry,
         r#"
-            INSERT INTO entries (shelf_id, title, content)
-            SELECT $1, $2, $3
+            INSERT INTO entries (shelf_id, title, content, entry_date)
+            SELECT $1, $2, $3, COALESCE($4, CURRENT_DATE)
             FROM shelves s
             JOIN workspaces w ON w.id = s.workspace_id
-            WHERE s.id = $1 AND w.user_id = $4
-            RETURNING id, shelf_id, title, content, total_size, created_at, updated_at
+            WHERE s.id = $1 AND w.user_id = $5
+            RETURNING id, shelf_id, title, content, total_size, entry_date, created_at, updated_at
         "#,
         shelf_id,
         title,
         content,
+        entry_date,
         user_id,
     )
     .fetch_optional(pool)
@@ -211,8 +215,9 @@ pub async fn update(
     id: Uuid,
     title: Option<&[u8]>,
     content: Option<&[u8]>,
+    entry_date: Option<NaiveDate>,
 ) -> Result<Entry, AppError> {
-    if title.is_none() && content.is_none() {
+    if title.is_none() && content.is_none() && entry_date.is_none() {
         return Err(AppError::BadRequest("no fields to update".into()));
     }
     if let Some(title) = title {
@@ -227,19 +232,21 @@ pub async fn update(
         r#"
             UPDATE entries e
             SET title = COALESCE($3, e.title),
-                content = COALESCE($4, e.content)
+                content = COALESCE($4, e.content),
+                entry_date = COALESCE($5, e.entry_date)
             FROM shelves s, workspaces w
             WHERE e.id = $1
                 AND e.shelf_id = s.id
                 AND s.workspace_id = w.id
                 AND w.user_id = $2
-            RETURNING e.id, e.shelf_id, e.title, e.content, e.total_size,
+            RETURNING e.id, e.shelf_id, e.title, e.content, e.total_size, e.entry_date,
                 e.created_at, e.updated_at
         "#,
         id,
         user_id,
         title,
         content,
+        entry_date,
     )
     .fetch_optional(pool)
     .await

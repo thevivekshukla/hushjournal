@@ -41,6 +41,7 @@ export type Entry = {
 	content: string;
 	contentLoaded: boolean;
 	saveStatus: SaveStatus;
+	entryDate: string;
 	createdAt: string;
 	updatedAt: string | null;
 };
@@ -66,6 +67,19 @@ export const SHELF_ICONS = [
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const SAVE_DELAY_MS = 500;
+
+export function isoDate(date = new Date()) {
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
+}
+
+export function parseIsoDate(iso: string) {
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+	if (!match) return new Date();
+	return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
 
 export function formatEntryDate(date = new Date()) {
 	return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
@@ -125,6 +139,7 @@ function mapEntrySummary(row: api.ApiEntrySummary, dek: Uint8Array, previous?: E
 		content: previous?.contentLoaded ? previous.content : '',
 		contentLoaded: previous?.contentLoaded ?? false,
 		saveStatus: previous?.saveStatus ?? 'saved',
+		entryDate: row.entry_date,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at
 	};
@@ -404,7 +419,8 @@ class Journal {
 		const dek = session.requireDek();
 		const row = await api.createEntry(shelfId, {
 			title: bytesToBase64(encryptText(dek, title, 'entry.title')),
-			content: bytesToBase64(encryptText(dek, '', 'entry.content'))
+			content: bytesToBase64(encryptText(dek, '', 'entry.content')),
+			entry_date: isoDate()
 		});
 		const entry = mapFullEntry(row, dek);
 		const others = this.entries.filter((item) => item.shelfId !== shelfId);
@@ -439,6 +455,32 @@ class Journal {
 				void this.#save(id);
 			}, SAVE_DELAY_MS)
 		);
+	}
+
+	async updateEntryDate(id: string, entryDate: string) {
+		const current = this.entry(id);
+		if (!current || current.entryDate === entryDate) return;
+		this.entries = this.entries.map((entry) =>
+			entry.id === id ? { ...entry, entryDate } : entry
+		);
+		const keepSaving = this.#dirty.has(id) || this.#saveTimers.has(id);
+		if (!keepSaving) this.#setSaveStatus(id, 'saving');
+		try {
+			const row = await api.updateEntry(id, { entry_date: entryDate });
+			this.entries = this.entries.map((item) =>
+				item.id === id
+					? {
+							...item,
+							entryDate: row.entry_date,
+							updatedAt: row.updated_at,
+							saveStatus: this.#dirty.has(id) || this.#saveTimers.has(id) ? item.saveStatus : 'saved'
+						}
+					: item
+			);
+		} catch (error) {
+			this.#setSaveStatus(id, 'error');
+			this.error = error instanceof Error ? error.message : 'Could not save.';
+		}
 	}
 
 	async deleteEntry(id: string) {

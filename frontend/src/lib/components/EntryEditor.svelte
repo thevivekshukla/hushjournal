@@ -1,6 +1,5 @@
 <script lang="ts">
-	import type { Entry } from '$lib/journal.svelte';
-	import { journal } from '$lib/journal.svelte';
+	import { formatEntryDate, journal, parseIsoDate, type Entry } from '$lib/journal.svelte';
 
 	let { entry, onDelete }: { entry: Entry; onDelete: () => void } = $props();
 
@@ -14,6 +13,8 @@
 					: 'Saved'
 	);
 
+	const dateLabel = $derived(formatEntryDate(parseIsoDate(entry.entryDate)));
+
 	const stats = $derived.by(() => {
 		const content = entry.content;
 		return {
@@ -22,6 +23,15 @@
 			lines: content === '' ? 0 : content.split('\n').length
 		};
 	});
+
+	let dateInput: HTMLInputElement | undefined;
+
+	function dateRef(node: HTMLInputElement) {
+		dateInput = node;
+		return () => {
+			dateInput = undefined;
+		};
+	}
 
 	function updateTitle(event: Event) {
 		const title = (event.currentTarget as HTMLInputElement).value;
@@ -32,11 +42,47 @@
 		const content = (event.currentTarget as HTMLTextAreaElement).value;
 		journal.updateEntry(entry.id, { content });
 	}
+
+	function openCalendar() {
+		if (!dateInput) return;
+		try {
+			dateInput.showPicker();
+		} catch {
+			dateInput.focus();
+		}
+	}
+
+	function updateDate(event: Event) {
+		const value = (event.currentTarget as HTMLInputElement).value;
+		if (!value) return;
+		void journal.updateEntryDate(entry.id, value);
+	}
 </script>
 
 <div class="flex h-full min-h-0 flex-col">
 	<div class="flex items-center justify-between gap-3 px-4 pt-3 pb-1 md:px-10">
-		<p class="text-xs tracking-wide text-base-content/50 uppercase">{status}</p>
+		<div class="flex min-w-0 items-center gap-3">
+			<div class="relative inline-flex">
+				<button
+					type="button"
+					class="cursor-pointer text-xs tracking-wide text-base-content/50"
+					onclick={openCalendar}
+					aria-label="Entry date, {dateLabel}"
+				>
+					{dateLabel}
+				</button>
+				<input
+					{@attach dateRef}
+					class="pointer-events-none absolute inset-0 opacity-0"
+					type="date"
+					value={entry.entryDate}
+					onchange={updateDate}
+					tabindex="-1"
+					aria-hidden="true"
+				/>
+			</div>
+			<p class="text-xs tracking-wide text-base-content/50 uppercase">{status}</p>
+		</div>
 		<button type="button" class="btn btn-ghost text-error btn-sm" onclick={onDelete}>
 			<span class="icon-[lucide--trash-2] size-4"></span>
 			<span class="hidden sm:inline">Delete</span>

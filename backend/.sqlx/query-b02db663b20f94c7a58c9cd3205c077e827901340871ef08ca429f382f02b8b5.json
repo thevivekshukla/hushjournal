@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            UPDATE entries e\n            SET title = COALESCE($3, e.title),\n                content = COALESCE($4, e.content)\n            FROM shelves s, workspaces w\n            WHERE e.id = $1\n                AND e.shelf_id = s.id\n                AND s.workspace_id = w.id\n                AND w.user_id = $2\n            RETURNING e.id, e.shelf_id, e.title, e.content, e.total_size,\n                e.created_at, e.updated_at\n        ",
+  "query": "\n                SELECT id, shelf_id, title, total_size, entry_date, created_at, updated_at\n                FROM entries\n                WHERE shelf_id = $1 AND id < $2\n                ORDER BY id DESC\n                LIMIT $3\n            ",
   "describe": {
     "columns": [
       {
@@ -38,23 +38,23 @@
       },
       {
         "ordinal": 3,
-        "name": "content",
-        "type_info": "Bytea",
-        "origin": {
-          "Table": {
-            "table": "entries",
-            "name": "content"
-          }
-        }
-      },
-      {
-        "ordinal": 4,
         "name": "total_size",
         "type_info": "Int8",
         "origin": {
           "Table": {
             "table": "entries",
             "name": "total_size"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "entry_date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "entries",
+            "name": "entry_date"
           }
         }
       },
@@ -85,8 +85,7 @@
       "Left": [
         "Uuid",
         "Uuid",
-        "Bytea",
-        "Bytea"
+        "Int8"
       ]
     },
     "nullable": [
@@ -99,5 +98,5 @@
       true
     ]
   },
-  "hash": "e08bbca2af84b1c3f4713c83ea2595759f191c046e770d6c0d6e1146b0247246"
+  "hash": "b02db663b20f94c7a58c9cd3205c077e827901340871ef08ca429f382f02b8b5"
 }

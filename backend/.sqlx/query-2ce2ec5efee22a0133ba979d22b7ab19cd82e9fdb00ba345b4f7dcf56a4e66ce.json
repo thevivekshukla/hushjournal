@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT id, shelf_id, title, total_size, created_at, updated_at\n                FROM entries\n                WHERE shelf_id = $1 AND id < $2\n                ORDER BY id DESC\n                LIMIT $3\n            ",
+  "query": "\n                SELECT id, shelf_id, title, total_size, entry_date, created_at, updated_at\n                FROM entries\n                WHERE shelf_id = $1 AND id > $2\n                ORDER BY id ASC\n                LIMIT $3\n            ",
   "describe": {
     "columns": [
       {
@@ -49,6 +49,17 @@
       },
       {
         "ordinal": 4,
+        "name": "entry_date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "entries",
+            "name": "entry_date"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -59,7 +70,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -83,8 +94,9 @@
       false,
       false,
       false,
+      false,
       true
     ]
   },
-  "hash": "8acee35214786413cfccc4d486c66f4a6c760b3a7d800ea8f6ecdbc9d04749de"
+  "hash": "2ce2ec5efee22a0133ba979d22b7ab19cd82e9fdb00ba345b4f7dcf56a4e66ce"
 }

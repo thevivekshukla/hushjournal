@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT e.id, e.shelf_id, e.title, e.content, e.total_size,\n                e.created_at, e.updated_at\n            FROM entries e\n            JOIN shelves s ON s.id = e.shelf_id\n            JOIN workspaces w ON w.id = s.workspace_id\n            WHERE e.id = $1 AND w.user_id = $2\n        ",
+  "query": "\n            UPDATE entries e\n            SET title = COALESCE($3, e.title),\n                content = COALESCE($4, e.content),\n                entry_date = COALESCE($5, e.entry_date)\n            FROM shelves s, workspaces w\n            WHERE e.id = $1\n                AND e.shelf_id = s.id\n                AND s.workspace_id = w.id\n                AND w.user_id = $2\n            RETURNING e.id, e.shelf_id, e.title, e.content, e.total_size, e.entry_date,\n                e.created_at, e.updated_at\n        ",
   "describe": {
     "columns": [
       {
@@ -60,6 +60,17 @@
       },
       {
         "ordinal": 5,
+        "name": "entry_date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "entries",
+            "name": "entry_date"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -70,7 +81,7 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -84,7 +95,10 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid"
+        "Uuid",
+        "Bytea",
+        "Bytea",
+        "Date"
       ]
     },
     "nullable": [
@@ -94,8 +108,9 @@
       false,
       false,
       false,
+      false,
       true
     ]
   },
-  "hash": "70aaab9546270886337a04f81740859445d37bbd30ecdf3b75c2205ada6439b4"
+  "hash": "2d972fc8d7cd03d86829125d318487622e7a842cc9c735a2c614ac8772819df9"
 }

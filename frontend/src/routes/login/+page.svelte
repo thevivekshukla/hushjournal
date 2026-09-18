@@ -8,6 +8,7 @@
 	let tab = $state<'signin' | 'signup'>('signin');
 	let username = $state('');
 	let password = $state('');
+	let confirmPassword = $state('');
 	let showPassword = $state(false);
 	let busy = $state(false);
 	let error = $state('');
@@ -52,12 +53,17 @@
 		const form = event.currentTarget;
 		if (!(form instanceof HTMLFormElement)) return;
 		const data = new FormData(form);
+		const nextPassword = String(data.get('new-password') ?? '');
+		if (nextPassword !== String(data.get('new-password-confirm') ?? '')) {
+			error = 'Passwords do not match.';
+			return;
+		}
 		busy = true;
 		error = '';
 		try {
 			const user = await api.signupWithPassword({
 				username: String(data.get('username') ?? '').trim(),
-				password: String(data.get('new-password') ?? '')
+				password: nextPassword
 			});
 			session.setUser(user);
 			await goto(api.workspaces());
@@ -224,10 +230,25 @@
 								required
 								minlength={8}
 								maxlength={128}
-								enterkeyhint="done"
+								enterkeyhint="next"
 								bind:value={password}
 							/>
 						</div>
+						<label class="w-full" for="new-password-confirm">
+							<span class="mb-1 block text-sm">Confirm password</span>
+							<input
+								id="new-password-confirm"
+								name="new-password-confirm"
+								class="input w-full"
+								type={showPassword ? 'text' : 'password'}
+								autocomplete="new-password"
+								required
+								minlength={8}
+								maxlength={128}
+								enterkeyhint="done"
+								bind:value={confirmPassword}
+							/>
+						</label>
 						{#if error}
 							<p class="text-sm text-error">{error}</p>
 						{/if}

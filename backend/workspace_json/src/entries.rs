@@ -2,6 +2,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Json, Router};
+use chrono::NaiveDate;
 use db::AppState;
 use errors::AppError;
 use serde::Deserialize;
@@ -21,6 +22,8 @@ struct CreateEntry {
     title: Vec<u8>,
     #[serde(with = "workspace::b64")]
     content: Vec<u8>,
+    #[serde(default)]
+    entry_date: Option<NaiveDate>,
 }
 
 #[derive(Deserialize)]
@@ -37,6 +40,8 @@ struct UpdateEntry {
     title: Option<Vec<u8>>,
     #[serde(default, deserialize_with = "workspace::b64_opt::deserialize")]
     content: Option<Vec<u8>>,
+    #[serde(default)]
+    entry_date: Option<NaiveDate>,
 }
 
 async fn list(
@@ -73,7 +78,15 @@ async fn create(
     Path(shelf_id): Path<Uuid>,
     Json(body): Json<CreateEntry>,
 ) -> Result<(StatusCode, Json<Entry>), AppError> {
-    let entry = entries::create(&state.db, user_id, shelf_id, &body.title, &body.content).await?;
+    let entry = entries::create(
+        &state.db,
+        user_id,
+        shelf_id,
+        &body.title,
+        &body.content,
+        body.entry_date,
+    )
+    .await?;
     tracing::info!(
         entry_id = %entry.id,
         shelf_id = %shelf_id,
@@ -96,6 +109,7 @@ async fn update(
             id,
             body.title.as_deref(),
             body.content.as_deref(),
+            body.entry_date,
         )
         .await?,
     ))

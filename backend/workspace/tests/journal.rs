@@ -33,12 +33,13 @@ async fn journal_crud_and_workspace_limit(pool: PgPool) {
             .expect("shelf");
     assert_eq!(shelf.name, b"shelf-name");
 
-    let entry = workspace::entries::create(&pool, user.id, shelf.id, b"title", b"body")
+    let entry = workspace::entries::create(&pool, user.id, shelf.id, b"title", b"body", None)
         .await
         .expect("entry");
     assert_eq!(entry.title, b"title");
     assert_eq!(entry.content, b"body");
     assert_eq!(entry.total_size, (b"title".len() + b"body".len()) as i64);
+    assert_eq!(entry.entry_date, entry.created_at.date_naive());
 
     let page = workspace::entries::list(&pool, user.id, shelf.id, None, ListOrder::Desc, 50)
         .await
@@ -51,7 +52,7 @@ async fn journal_crud_and_workspace_limit(pool: PgPool) {
         .expect("get");
     assert_eq!(fetched.content, b"body");
 
-    workspace::entries::update(&pool, user.id, entry.id, Some(b"new-title"), None)
+    workspace::entries::update(&pool, user.id, entry.id, Some(b"new-title"), None, None)
         .await
         .expect("update");
     let updated = workspace::entries::get(&pool, user.id, entry.id)
@@ -63,6 +64,16 @@ async fn journal_crud_and_workspace_limit(pool: PgPool) {
         (b"new-title".len() + b"body".len()) as i64
     );
     assert!(updated.updated_at.is_some());
+
+    let dated = chrono::NaiveDate::from_ymd_opt(2020, 1, 15).expect("date");
+    workspace::entries::update(&pool, user.id, entry.id, None, None, Some(dated))
+        .await
+        .expect("update date");
+    let dated_entry = workspace::entries::get(&pool, user.id, entry.id)
+        .await
+        .expect("get dated");
+    assert_eq!(dated_entry.entry_date, dated);
+    assert_eq!(dated_entry.title, b"new-title");
 
     for i in 1..20 {
         workspace::workspaces::create(

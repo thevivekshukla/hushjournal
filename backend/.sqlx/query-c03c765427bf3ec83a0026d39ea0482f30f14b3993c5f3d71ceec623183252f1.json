@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT id, shelf_id, title, total_size, created_at, updated_at\n                FROM entries\n                WHERE shelf_id = $1 AND id > $2\n                ORDER BY id ASC\n                LIMIT $3\n            ",
+  "query": "\n            INSERT INTO entries (shelf_id, title, content, entry_date)\n            SELECT $1, $2, $3, COALESCE($4, CURRENT_DATE)\n            FROM shelves s\n            JOIN workspaces w ON w.id = s.workspace_id\n            WHERE s.id = $1 AND w.user_id = $5\n            RETURNING id, shelf_id, title, content, total_size, entry_date, created_at, updated_at\n        ",
   "describe": {
     "columns": [
       {
@@ -38,6 +38,17 @@
       },
       {
         "ordinal": 3,
+        "name": "content",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "entries",
+            "name": "content"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
         "name": "total_size",
         "type_info": "Int8",
         "origin": {
@@ -48,7 +59,18 @@
         }
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
+        "name": "entry_date",
+        "type_info": "Date",
+        "origin": {
+          "Table": {
+            "table": "entries",
+            "name": "entry_date"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -59,7 +81,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 7,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -73,8 +95,10 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid",
-        "Int8"
+        "Bytea",
+        "Bytea",
+        "Date",
+        "Uuid"
       ]
     },
     "nullable": [
@@ -83,8 +107,10 @@
       false,
       false,
       false,
+      false,
+      false,
       true
     ]
   },
-  "hash": "bdeff4db3e043c4ba0608c0b5b03f23d72b1da85b69594a370649b3052848134"
+  "hash": "c03c765427bf3ec83a0026d39ea0482f30f14b3993c5f3d71ceec623183252f1"
 }

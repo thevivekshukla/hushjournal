@@ -57,6 +57,7 @@ export type ApiEntrySummary = {
 	id: string;
 	shelf_id: string;
 	title: string;
+	entry_date: string;
 	created_at: string;
 	updated_at: string | null;
 };
@@ -139,12 +140,18 @@ export const listEntries = (
 	);
 };
 export const getEntry = (id: string) => apiFetch<ApiEntry>(entry(id));
-export const createEntry = (shelfId: string, body: { title: string; content: string }) =>
+export const createEntry = (
+	shelfId: string,
+	body: { title: string; content: string; entry_date?: string }
+) =>
 	apiFetch<ApiEntry>(shelfEntries(shelfId), {
 		method: 'POST',
 		body: JSON.stringify(body)
 	});
-export const updateEntry = (id: string, body: { title?: string; content?: string }) =>
+export const updateEntry = (
+	id: string,
+	body: { title?: string; content?: string; entry_date?: string }
+) =>
 	apiFetch<ApiEntry>(entry(id), {
 		method: 'PATCH',
 		body: JSON.stringify(body)
