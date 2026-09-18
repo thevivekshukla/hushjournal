@@ -66,7 +66,7 @@ export const NOTEBOOK_ICONS = [
 ] as const;
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const SAVE_DELAY_MS = 500;
+const SAVE_DELAY_MS = 2_000;
 
 export function isoDate(date = new Date()) {
 	const year = date.getFullYear();
