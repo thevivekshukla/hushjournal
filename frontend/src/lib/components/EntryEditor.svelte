@@ -1,7 +1,11 @@
 <script lang="ts">
+	import { parseDate, type DateValue } from '@internationalized/date';
+	import { Calendar, Popover } from 'bits-ui';
 	import { formatEntryDate, journal, parseIsoDate, type Entry } from '$lib/journal.svelte';
 
 	let { entry, onDelete }: { entry: Entry; onDelete: () => void } = $props();
+
+	let calendarOpen = $state(false);
 
 	const status = $derived(
 		!entry.contentLoaded
@@ -14,6 +18,7 @@
 	);
 
 	const dateLabel = $derived(formatEntryDate(parseIsoDate(entry.entryDate)));
+	const selectedDate = $derived(parseDate(entry.entryDate));
 
 	const stats = $derived.by(() => {
 		const content = entry.content;
@@ -23,15 +28,6 @@
 			lines: content === '' ? 0 : content.split('\n').length
 		};
 	});
-
-	let dateInput: HTMLInputElement | undefined;
-
-	function dateRef(node: HTMLInputElement) {
-		dateInput = node;
-		return () => {
-			dateInput = undefined;
-		};
-	}
 
 	function updateTitle(event: Event) {
 		const title = (event.currentTarget as HTMLInputElement).value;
@@ -43,44 +39,91 @@
 		journal.updateEntry(entry.id, { content });
 	}
 
-	function openCalendar() {
-		if (!dateInput) return;
-		try {
-			dateInput.showPicker();
-		} catch {
-			dateInput.focus();
-		}
-	}
-
-	function updateDate(event: Event) {
-		const value = (event.currentTarget as HTMLInputElement).value;
-		if (!value) return;
-		void journal.updateEntryDate(entry.id, value);
+	function selectDate(next: DateValue | undefined) {
+		if (!next) return;
+		calendarOpen = false;
+		void journal.updateEntryDate(entry.id, next.toString());
 	}
 </script>
 
 <div class="flex h-full min-h-0 flex-col">
 	<div class="flex items-center justify-between gap-3 px-4 pt-3 pb-1 md:px-10">
 		<div class="flex min-w-0 items-center gap-3">
-			<div class="relative inline-flex">
-				<button
+			<Popover.Root bind:open={calendarOpen}>
+				<Popover.Trigger
 					type="button"
 					class="cursor-pointer text-xs tracking-wide text-base-content/50"
-					onclick={openCalendar}
 					aria-label="Entry date, {dateLabel}"
 				>
 					{dateLabel}
-				</button>
-				<input
-					{@attach dateRef}
-					class="pointer-events-none absolute inset-0 opacity-0"
-					type="date"
-					value={entry.entryDate}
-					onchange={updateDate}
-					tabindex="-1"
-					aria-hidden="true"
-				/>
-			</div>
+				</Popover.Trigger>
+				<Popover.Portal>
+					<Popover.Content
+						class="z-50 rounded-xl border border-base-300 bg-base-100 p-3 shadow-lg"
+						sideOffset={8}
+						align="start"
+					>
+						<Calendar.Root
+							type="single"
+							value={selectedDate}
+							onValueChange={selectDate}
+							weekdayFormat="short"
+							fixedWeeks
+							class="w-[17.5rem]"
+						>
+							{#snippet children({ months, weekdays })}
+								<Calendar.Header class="flex items-center justify-between">
+									<Calendar.PrevButton
+										type="button"
+										class="btn btn-ghost btn-square btn-sm"
+										aria-label="Previous month"
+									>
+										<span class="icon-[lucide--chevron-left] size-4"></span>
+									</Calendar.PrevButton>
+									<Calendar.Heading class="text-sm font-medium" />
+									<Calendar.NextButton
+										type="button"
+										class="btn btn-ghost btn-square btn-sm"
+										aria-label="Next month"
+									>
+										<span class="icon-[lucide--chevron-right] size-4"></span>
+									</Calendar.NextButton>
+								</Calendar.Header>
+								{#each months as month (month.value.toString())}
+									<Calendar.Grid class="mt-2 w-full border-collapse select-none">
+										<Calendar.GridHead>
+											<Calendar.GridRow class="flex">
+												{#each weekdays as day (day)}
+													<Calendar.HeadCell
+														class="w-8 pb-1 text-center text-[0.65rem] font-normal text-base-content/50"
+													>
+														{day.slice(0, 2)}
+													</Calendar.HeadCell>
+												{/each}
+											</Calendar.GridRow>
+										</Calendar.GridHead>
+										<Calendar.GridBody>
+											{#each month.weeks as week (week[0].toString())}
+												<Calendar.GridRow class="flex">
+													{#each week as date (date.toString())}
+														<Calendar.Cell {date} month={month.value} class="p-0">
+															<Calendar.Day
+																class="inline-flex size-8 items-center justify-center rounded-lg text-sm hover:bg-base-200 data-disabled:pointer-events-none data-disabled:text-base-content/30 data-outside-month:text-base-content/30 data-selected:bg-neutral data-selected:text-neutral-content data-selected:hover:bg-neutral data-today:font-semibold"
+															>
+																{date.day}
+															</Calendar.Day>
+														</Calendar.Cell>
+													{/each}
+												</Calendar.GridRow>
+											{/each}
+										</Calendar.GridBody>
+									</Calendar.Grid>
+								{/each}
+							{/snippet}
+						</Calendar.Root>
+					</Popover.Content>
+				</Popover.Portal>
+			</Popover.Root>
 			<p class="text-xs tracking-wide text-base-content/50 uppercase">{status}</p>
 		</div>
 		<button type="button" class="btn btn-ghost text-error btn-sm" onclick={onDelete}>
