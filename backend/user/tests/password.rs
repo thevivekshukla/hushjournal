@@ -1,6 +1,7 @@
-#[tokio::test]
-async fn password_signup_then_login() {
-    let pool = db::connect_pool("sqlite::memory:").await.expect("connect");
+use sqlx::PgPool;
+
+#[sqlx::test(migrations = "../db/migrations")]
+async fn password_signup_then_login(pool: PgPool) {
     let created = user::signup_with_password(&pool, "Ada_Lovelace", "correct horse")
         .await
         .expect("signup");
@@ -14,9 +15,8 @@ async fn password_signup_then_login() {
     assert_eq!(logged_in.id, created.id);
 }
 
-#[tokio::test]
-async fn password_signup_rejects_taken_username() {
-    let pool = db::connect_pool("sqlite::memory:").await.expect("connect");
+#[sqlx::test(migrations = "../db/migrations")]
+async fn password_signup_rejects_taken_username(pool: PgPool) {
     user::signup_with_password(&pool, "grace", "password1")
         .await
         .expect("signup");
@@ -26,9 +26,8 @@ async fn password_signup_rejects_taken_username() {
     assert!(matches!(err, errors::AppError::Conflict));
 }
 
-#[tokio::test]
-async fn password_login_rejects_wrong_password() {
-    let pool = db::connect_pool("sqlite::memory:").await.expect("connect");
+#[sqlx::test(migrations = "../db/migrations")]
+async fn password_login_rejects_wrong_password(pool: PgPool) {
     user::signup_with_password(&pool, "hopper", "password1")
         .await
         .expect("signup");
@@ -38,17 +37,18 @@ async fn password_login_rejects_wrong_password() {
     assert!(matches!(err, errors::AppError::BadRequest(_)));
 }
 
-#[tokio::test]
-async fn password_login_rejects_inactive_user() {
-    let pool = db::connect_pool("sqlite::memory:").await.expect("connect");
+#[sqlx::test(migrations = "../db/migrations")]
+async fn password_login_rejects_inactive_user(pool: PgPool) {
     let created = user::signup_with_password(&pool, "katherine", "password1")
         .await
         .expect("signup");
-    sqlx::query("UPDATE users SET is_active = FALSE WHERE id = ?")
-        .bind(created.id)
-        .execute(&pool)
-        .await
-        .expect("deactivate");
+    sqlx::query!(
+        "UPDATE users SET is_active = false WHERE id = $1",
+        created.id
+    )
+    .execute(&pool)
+    .await
+    .expect("deactivate");
 
     let err = user::login_with_password(&pool, "katherine", "password1")
         .await

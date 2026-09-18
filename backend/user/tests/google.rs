@@ -1,3 +1,4 @@
+use sqlx::PgPool;
 use user::GoogleAccount;
 
 fn account(id: &str, name: &str, email: &str) -> GoogleAccount {
@@ -10,9 +11,8 @@ fn account(id: &str, name: &str, email: &str) -> GoogleAccount {
     }
 }
 
-#[tokio::test]
-async fn google_login_creates_and_updates_without_renaming() {
-    let pool = db::connect_pool("sqlite::memory:").await.expect("connect");
+#[sqlx::test(migrations = "../db/migrations")]
+async fn google_login_creates_and_updates_without_renaming(pool: PgPool) {
     let created =
         user::login_with_google(&pool, &account("g-1", "Ada Lovelace", "ada@example.com"))
             .await
@@ -32,17 +32,18 @@ async fn google_login_creates_and_updates_without_renaming() {
     assert_eq!(updated.google_email.as_deref(), Some("ada.new@example.com"));
 }
 
-#[tokio::test]
-async fn google_login_rejects_inactive_user() {
-    let pool = db::connect_pool("sqlite::memory:").await.expect("connect");
+#[sqlx::test(migrations = "../db/migrations")]
+async fn google_login_rejects_inactive_user(pool: PgPool) {
     let created = user::login_with_google(&pool, &account("g-2", "Grace", "grace@example.com"))
         .await
         .expect("create");
-    sqlx::query("UPDATE users SET is_active = FALSE WHERE id = ?")
-        .bind(created.id)
-        .execute(&pool)
-        .await
-        .expect("deactivate");
+    sqlx::query!(
+        "UPDATE users SET is_active = false WHERE id = $1",
+        created.id
+    )
+    .execute(&pool)
+    .await
+    .expect("deactivate");
 
     let err = user::login_with_google(&pool, &account("g-2", "Grace", "grace@example.com"))
         .await

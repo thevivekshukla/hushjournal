@@ -2,8 +2,4 @@
 .env
 /bin/e2ejournal/static/*
 !/bin/e2ejournal/static/.gitkeep
-*.db
-*.db-wal
-*.db-shm
-*.db-journal
 

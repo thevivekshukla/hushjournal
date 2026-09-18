@@ -1,4 +1,5 @@
 use errors::AppError;
+use sqlx::PgPool;
 use user::GoogleAccount;
 use workspace::entries::ListOrder;
 
@@ -12,9 +13,8 @@ fn account() -> GoogleAccount {
     }
 }
 
-#[tokio::test]
-async fn journal_crud_and_workspace_limit() {
-    let pool = db::connect_pool("sqlite::memory:").await.expect("connect");
+#[sqlx::test(migrations = "../db/migrations")]
+async fn journal_crud_and_workspace_limit(pool: PgPool) {
     let user = user::login_with_google(&pool, &account())
         .await
         .expect("user");

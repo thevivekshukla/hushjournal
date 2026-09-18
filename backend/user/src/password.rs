@@ -1,41 +1,32 @@
 use argon2::Argon2;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
-use chrono::{DateTime, Utc};
 use errors::AppError;
-use sqlx::SqlitePool;
-use uuid::Uuid;
+use sqlx::PgPool;
 
 use super::{MAX_PASSWORD_LEN, MAX_USERNAME_LEN, MIN_PASSWORD_LEN, MIN_USERNAME_LEN, User, map_db};
 
 const INVALID_CREDENTIALS: &str = "invalid username or password";
 
 pub async fn signup_with_password(
-    pool: &SqlitePool,
+    pool: &PgPool,
     username: &str,
     password: &str,
 ) -> Result<User, AppError> {
     let username = normalize_username(username)?;
     let password = normalize_password(password)?;
     let password_hash = hash_password(password)?;
-    let id = Uuid::now_v7();
     let name = username.clone();
 
     sqlx::query_as!(
         User,
         r#"
-            INSERT INTO users (id, name, username, password_hash, last_login_at)
-            VALUES ($1, $2, $3, $4, unixepoch())
-            RETURNING id as "id!: Uuid", name, username, email,
-                is_email_verified as "is_email_verified!: bool",
-                email_verified_at as "email_verified_at: DateTime<Utc>",
+            INSERT INTO users (name, username, password_hash, last_login_at)
+            VALUES ($1, $2, $3, now())
+            RETURNING id, name, username, email, is_email_verified, email_verified_at,
                 google_email, google_account_id, google_avatar_url,
-                is_active as "is_active!: bool",
-                last_login_at as "last_login_at: DateTime<Utc>",
-                created_at as "created_at!: DateTime<Utc>",
-                updated_at as "updated_at: DateTime<Utc>"
+                is_active, last_login_at, created_at, updated_at
         "#,
-        id,
         name,
         username,
         password_hash,
@@ -46,7 +37,7 @@ pub async fn signup_with_password(
 }
 
 pub async fn login_with_password(
-    pool: &SqlitePool,
+    pool: &PgPool,
     username: &str,
     password: &str,
 ) -> Result<User, AppError> {
@@ -54,7 +45,7 @@ pub async fn login_with_password(
     let password = normalize_password(password)?;
     let row = sqlx::query!(
         r#"
-            SELECT id as "id!: Uuid", password_hash, is_active as "is_active!: bool"
+            SELECT id, password_hash, is_active
             FROM users
             WHERE username = $1
         "#,
@@ -78,16 +69,11 @@ pub async fn login_with_password(
         User,
         r#"
             UPDATE users
-            SET last_login_at = unixepoch()
+            SET last_login_at = now()
             WHERE id = $1
-            RETURNING id as "id!: Uuid", name, username, email,
-                is_email_verified as "is_email_verified!: bool",
-                email_verified_at as "email_verified_at: DateTime<Utc>",
+            RETURNING id, name, username, email, is_email_verified, email_verified_at,
                 google_email, google_account_id, google_avatar_url,
-                is_active as "is_active!: bool",
-                last_login_at as "last_login_at: DateTime<Utc>",
-                created_at as "created_at!: DateTime<Utc>",
-                updated_at as "updated_at: DateTime<Utc>"
+                is_active, last_login_at, created_at, updated_at
         "#,
         row.id,
     )

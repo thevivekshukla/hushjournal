@@ -3,11 +3,11 @@ use rand::RngCore;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::KvStore;
+use crate::PgStore;
 
 pub const SESSION_COOKIE: &str = "session";
 
@@ -35,7 +35,7 @@ impl Session {
         }
     }
 
-    pub async fn load(pool: &SqlitePool, raw_id: &str) -> anyhow::Result<Option<Self>> {
+    pub async fn load(pool: &PgPool, raw_id: &str) -> anyhow::Result<Option<Self>> {
         let store_key = hash_session_id(raw_id);
         let Some(mut session) = Self::try_get_ex(pool, store_key.clone()).await? else {
             return Ok(None);
@@ -66,7 +66,7 @@ impl Session {
 
     pub async fn attach<T: Serialize>(
         &mut self,
-        pool: &SqlitePool,
+        pool: &PgPool,
         key: impl Into<String>,
         value: &T,
     ) -> anyhow::Result<()> {
@@ -75,23 +75,23 @@ impl Session {
         self.persist(pool).await
     }
 
-    pub async fn remove(&mut self, pool: &SqlitePool, key: &str) -> anyhow::Result<()> {
+    pub async fn remove(&mut self, pool: &PgPool, key: &str) -> anyhow::Result<()> {
         self.values.remove(key);
         self.persist(pool).await
     }
 
-    pub async fn destroy(&mut self, pool: &SqlitePool) -> anyhow::Result<()> {
+    pub async fn destroy(&mut self, pool: &PgPool) -> anyhow::Result<()> {
         Self::del(pool, self.store_key.clone()).await?;
         *self = Self::new();
         Ok(())
     }
 
-    async fn persist(&self, pool: &SqlitePool) -> anyhow::Result<()> {
+    async fn persist(&self, pool: &PgPool) -> anyhow::Result<()> {
         self.set_ex(pool, self.store_key.clone()).await
     }
 }
 
-impl KvStore for Session {
+impl PgStore for Session {
     const EXPIRE_IN: usize = 60 * 60 * 24 * 14;
 
     fn key_format(key: String) -> String {

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE workspaces w\n            SET total_workspace_size = (\n                    SELECT COALESCE(SUM(s.total_shelf_size), 0)::bigint\n                    FROM shelves s\n                    WHERE s.workspace_id = w.id\n                ),\n                size_last_calculated_at = now()\n            WHERE w.size_last_calculated_at IS NULL\n               OR EXISTS (\n                    SELECT 1\n                    FROM shelves s\n                    WHERE s.workspace_id = w.id\n                      AND (\n                          s.created_at > w.size_last_calculated_at\n                          OR s.updated_at > w.size_last_calculated_at\n                          OR s.size_last_calculated_at > w.size_last_calculated_at\n                      )\n                )\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "70acc8874dd998f1f1a2d0c401536d8e07a4fde84c6052bb9c7d51de96851ad3"
+}

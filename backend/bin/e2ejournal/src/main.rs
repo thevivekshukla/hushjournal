@@ -25,7 +25,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Backup the SQLite database
+    /// Backup the Postgres database with pg_dump
     #[command(name = "db-backup")]
     DbBackup {
         /// File to write the backup to
@@ -82,8 +82,7 @@ fn write_sample_env_to(dir: impl AsRef<std::path::Path>) -> anyhow::Result<()> {
 async fn db_backup(path: Option<PathBuf>) -> anyhow::Result<()> {
     let database_url =
         std::env::var("DATABASE_URL").context("DATABASE_URL must be set (see .env.example)")?;
-    let src = db::sqlite_file_path(&database_url)?;
-    let dest = path.unwrap_or_else(|| db::default_backup_path(&src));
+    let dest = path.unwrap_or_else(db::default_backup_path);
     let dest = db::backup_to(&database_url, &dest).await?;
     tracing::info!("wrote backup to {}", dest.display());
     println!("{}", dest.display());
@@ -99,7 +98,7 @@ async fn serve() -> anyhow::Result<()> {
         config.google_oauth.clone(),
     )
     .await?;
-    tokio::spawn(db::kvstore_cleanup(state.db.clone()));
+    tokio::spawn(db::pgstore_cleanup(state.db.clone()));
     tokio::spawn(size_cron(state.db.clone()));
 
     let listener = TcpListener::bind(config.bind_addr())
@@ -121,7 +120,7 @@ async fn serve() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn size_cron(pool: sqlx::SqlitePool) {
+async fn size_cron(pool: sqlx::PgPool) {
     loop {
         match workspace::sizes::recalculate_stale_shelf_sizes(&pool).await {
             Ok(n) if n > 0 => tracing::info!(shelves = n, "recalculated shelf sizes"),
@@ -207,7 +206,11 @@ mod tests {
 
         write_sample_env_to(&dir).expect("create");
         let first = std::fs::read_to_string(&env_path).expect("read");
-        assert!(first.contains("DATABASE_URL=sqlite:e2ejournal.db"));
+        assert!(
+            first.contains(
+                "DATABASE_URL=postgres://e2ejournal:e2ejournal@localhost:58417/e2ejournal"
+            )
+        );
         assert!(first.contains("GOOGLE_LOGIN_OAUTH2="));
 
         std::fs::write(&env_path, "keep=me\n").expect("marker");

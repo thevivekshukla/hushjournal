@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            DELETE FROM shelves s\n            USING workspaces w\n            WHERE s.id = $1 AND s.workspace_id = w.id AND w.user_id = $2\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d46ff288f01b03275e25603d16041bf0589c42972b2a22ec3499be8baab9fd68"
+}

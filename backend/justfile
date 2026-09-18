@@ -4,14 +4,12 @@ spa_static := justfile_directory() / "bin" / "e2ejournal" / "static"
 run:
     watchexec -r -e rs,toml,html cargo run
 
-# Refresh the SQLx query cache against a throwaway migrated sqlite file.
+# Refresh the SQLx query cache against a migrated Postgres database.
 prepare:
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{justfile_directory()}}"
-    db="{{justfile_directory()}}/.sqlx-prepare.db"
-    rm -f "$db" "$db"-wal "$db"-shm
-    export DATABASE_URL="sqlite://${db}"
+    export DATABASE_URL="${DATABASE_URL:-postgres://e2ejournal:e2ejournal@localhost:58417/e2ejournal}"
     export SQLX_OFFLINE=false
     cargo sqlx database create
     cargo sqlx migrate run --source db/migrations

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO kv_store (\"key\", \"value\", expires)\n                VALUES ($1, $2, $3)\n                ON CONFLICT (\"key\") DO UPDATE\n                SET \"value\" = EXCLUDED.value, expires = EXCLUDED.expires\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6f3de987d49552abe3389249911d5a044bdc08b3156d5edcb15884e59ae192a0"
+}

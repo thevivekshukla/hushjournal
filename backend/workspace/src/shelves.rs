@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use errors::AppError;
 use serde::Serialize;
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{MAX_ICON_LEN, SHELF_NAME_MAX, map_db, require_bytes_max};
@@ -30,7 +30,7 @@ pub fn normalize_icon(icon: Option<&str>) -> Result<Option<String>, AppError> {
 }
 
 pub async fn list(
-    pool: &SqlitePool,
+    pool: &PgPool,
     user_id: Uuid,
     workspace_id: Uuid,
 ) -> Result<Vec<Shelf>, AppError> {
@@ -38,11 +38,8 @@ pub async fn list(
     sqlx::query_as!(
         Shelf,
         r#"
-            SELECT id as "id!: Uuid", workspace_id as "workspace_id!: Uuid", name, icon,
-                total_shelf_size,
-                size_last_calculated_at as "size_last_calculated_at: DateTime<Utc>",
-                created_at as "created_at!: DateTime<Utc>",
-                updated_at as "updated_at: DateTime<Utc>"
+            SELECT id, workspace_id, name, icon, total_shelf_size,
+                size_last_calculated_at, created_at, updated_at
             FROM shelves
             WHERE workspace_id = $1
             ORDER BY created_at ASC, id ASC
@@ -54,15 +51,12 @@ pub async fn list(
     .map_err(map_db)
 }
 
-pub async fn get(pool: &SqlitePool, user_id: Uuid, id: Uuid) -> Result<Shelf, AppError> {
+pub async fn get(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Shelf, AppError> {
     sqlx::query_as!(
         Shelf,
         r#"
-            SELECT s.id as "id!: Uuid", s.workspace_id as "workspace_id!: Uuid", s.name, s.icon,
-                s.total_shelf_size,
-                s.size_last_calculated_at as "size_last_calculated_at: DateTime<Utc>",
-                s.created_at as "created_at!: DateTime<Utc>",
-                s.updated_at as "updated_at: DateTime<Utc>"
+            SELECT s.id, s.workspace_id, s.name, s.icon, s.total_shelf_size,
+                s.size_last_calculated_at, s.created_at, s.updated_at
             FROM shelves s
             JOIN workspaces w ON w.id = s.workspace_id
             WHERE s.id = $1 AND w.user_id = $2
@@ -77,7 +71,7 @@ pub async fn get(pool: &SqlitePool, user_id: Uuid, id: Uuid) -> Result<Shelf, Ap
 }
 
 pub async fn create(
-    pool: &SqlitePool,
+    pool: &PgPool,
     user_id: Uuid,
     workspace_id: Uuid,
     name: &[u8],
@@ -85,22 +79,17 @@ pub async fn create(
 ) -> Result<Shelf, AppError> {
     require_bytes_max(name, "name", SHELF_NAME_MAX)?;
     let icon = normalize_icon(icon)?;
-    let id = Uuid::now_v7();
 
     sqlx::query_as!(
         Shelf,
         r#"
-            INSERT INTO shelves (id, workspace_id, name, icon)
-            SELECT $1, $2, $3, $4
+            INSERT INTO shelves (workspace_id, name, icon)
+            SELECT $1, $2, $3
             FROM workspaces
-            WHERE id = $2 AND user_id = $5
-            RETURNING id as "id!: Uuid", workspace_id as "workspace_id!: Uuid", name, icon,
-                total_shelf_size,
-                size_last_calculated_at as "size_last_calculated_at: DateTime<Utc>",
-                created_at as "created_at!: DateTime<Utc>",
-                updated_at as "updated_at: DateTime<Utc>"
+            WHERE id = $1 AND user_id = $4
+            RETURNING id, workspace_id, name, icon, total_shelf_size,
+                size_last_calculated_at, created_at, updated_at
         "#,
-        id,
         workspace_id,
         name,
         icon,
@@ -113,7 +102,7 @@ pub async fn create(
 }
 
 pub async fn update(
-    pool: &SqlitePool,
+    pool: &PgPool,
     user_id: Uuid,
     id: Uuid,
     name: Option<&[u8]>,
@@ -135,16 +124,13 @@ pub async fn update(
     sqlx::query_as!(
         Shelf,
         r#"
-            UPDATE shelves
-            SET name = COALESCE($3, name),
-                icon = CASE WHEN $4 THEN $5 ELSE icon END
-            WHERE id = $1
-              AND workspace_id IN (SELECT id FROM workspaces WHERE user_id = $2)
-            RETURNING id as "id!: Uuid", workspace_id as "workspace_id!: Uuid", name, icon,
-                total_shelf_size,
-                size_last_calculated_at as "size_last_calculated_at: DateTime<Utc>",
-                created_at as "created_at!: DateTime<Utc>",
-                updated_at as "updated_at: DateTime<Utc>"
+            UPDATE shelves s
+            SET name = COALESCE($3, s.name),
+                icon = CASE WHEN $4 THEN $5 ELSE s.icon END
+            FROM workspaces w
+            WHERE s.id = $1 AND s.workspace_id = w.id AND w.user_id = $2
+            RETURNING s.id, s.workspace_id, s.name, s.icon, s.total_shelf_size,
+                s.size_last_calculated_at, s.created_at, s.updated_at
         "#,
         id,
         user_id,
@@ -158,12 +144,12 @@ pub async fn update(
     .ok_or(AppError::NotFound)
 }
 
-pub async fn delete(pool: &SqlitePool, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
+pub async fn delete(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<(), AppError> {
     let result = sqlx::query!(
         r#"
-            DELETE FROM shelves
-            WHERE id = $1
-              AND workspace_id IN (SELECT id FROM workspaces WHERE user_id = $2)
+            DELETE FROM shelves s
+            USING workspaces w
+            WHERE s.id = $1 AND s.workspace_id = w.id AND w.user_id = $2
         "#,
         id,
         user_id,

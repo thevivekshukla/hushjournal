@@ -3,7 +3,7 @@ use axum::http::request::Parts;
 use axum_extra::extract::CookieJar;
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use cookie::time::Duration as CookieDuration;
-use db::{AppState, KvStore, Session as DbSession};
+use db::{AppState, PgStore, Session as DbSession};
 use errors::AppError;
 use uuid::Uuid;
 
