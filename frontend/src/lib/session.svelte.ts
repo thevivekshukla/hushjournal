@@ -22,7 +22,7 @@ class Session {
 	user = $state.raw<User | null>(null);
 	ready = $state(false);
 	loadError = $state<string | null>(null);
-	unlockedWorkspaceId = $state<string | null>(null);
+	unlockedJournalId = $state<string | null>(null);
 	#dek: Uint8Array | null = null;
 
 	constructor() {
@@ -54,16 +54,16 @@ class Session {
 		this.loadError = null;
 	}
 
-	unlock(workspaceId: string, dek: Uint8Array) {
+	unlock(journalId: string, dek: Uint8Array) {
 		zeroKey(this.#dek);
 		this.#dek = dek;
-		this.unlockedWorkspaceId = workspaceId;
+		this.unlockedJournalId = journalId;
 	}
 
 	lock() {
 		zeroKey(this.#dek);
 		this.#dek = null;
-		this.unlockedWorkspaceId = null;
+		this.unlockedJournalId = null;
 	}
 
 	clearLocal() {
@@ -82,8 +82,8 @@ class Session {
 	}
 
 	requireDek() {
-		if (!this.#dek || !this.unlockedWorkspaceId) {
-			throw new Error('Workspace is locked.');
+		if (!this.#dek || !this.unlockedJournalId) {
+			throw new Error('Journal is locked.');
 		}
 		return this.#dek;
 	}

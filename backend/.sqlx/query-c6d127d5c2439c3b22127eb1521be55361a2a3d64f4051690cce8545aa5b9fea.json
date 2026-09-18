@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE notebooks s\n            SET total_notebook_size = (\n                    SELECT COALESCE(SUM(e.total_size), 0)::bigint\n                    FROM entries e\n                    WHERE e.notebook_id = s.id\n                ),\n                size_last_calculated_at = now()\n            WHERE s.size_last_calculated_at IS NULL\n               OR EXISTS (\n                    SELECT 1\n                    FROM entries e\n                    WHERE e.notebook_id = s.id\n                      AND (\n                          e.created_at > s.size_last_calculated_at\n                          OR e.updated_at > s.size_last_calculated_at\n                      )\n                )\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "c6d127d5c2439c3b22127eb1521be55361a2a3d64f4051690cce8545aa5b9fea"
+}

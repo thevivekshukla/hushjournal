@@ -122,15 +122,15 @@ async fn serve() -> anyhow::Result<()> {
 
 async fn size_cron(pool: sqlx::PgPool) {
     loop {
-        match workspace::sizes::recalculate_stale_shelf_sizes(&pool).await {
-            Ok(n) if n > 0 => tracing::info!(shelves = n, "recalculated shelf sizes"),
+        match journal::sizes::recalculate_stale_notebook_sizes(&pool).await {
+            Ok(n) if n > 0 => tracing::info!(notebooks = n, "recalculated notebook sizes"),
             Ok(_) => {}
-            Err(err) => tracing::warn!(error = %err, "shelf size cron failed"),
+            Err(err) => tracing::warn!(error = %err, "notebook size cron failed"),
         }
-        match workspace::sizes::recalculate_stale_workspace_sizes(&pool).await {
-            Ok(n) if n > 0 => tracing::info!(workspaces = n, "recalculated workspace sizes"),
+        match journal::sizes::recalculate_stale_journal_sizes(&pool).await {
+            Ok(n) if n > 0 => tracing::info!(journals = n, "recalculated journal sizes"),
             Ok(_) => {}
-            Err(err) => tracing::warn!(error = %err, "workspace size cron failed"),
+            Err(err) => tracing::warn!(error = %err, "journal size cron failed"),
         }
         tokio::time::sleep(std::time::Duration::from_secs(60)).await;
     }
@@ -140,7 +140,7 @@ fn router(state: AppState) -> Router {
     Router::new()
         .route("/", get(root))
         .route("/health", get(health))
-        .nest("/api", user_json::router().merge(workspace_json::router()))
+        .nest("/api", user_json::router().merge(journal_json::router()))
         .fallback(get(spa::fallback))
         .layer(TraceLayer::new_for_http())
         .with_state(state)

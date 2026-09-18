@@ -1,9 +1,10 @@
 CREATE TABLE entries (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
-    shelf_id UUID NOT NULL REFERENCES shelves (id) ON DELETE CASCADE,
+    notebook_id UUID NOT NULL REFERENCES notebooks (id) ON DELETE CASCADE,
     title BYTEA NOT NULL,
     content BYTEA NOT NULL,
     total_size BIGINT NOT NULL DEFAULT 0,
+    entry_date DATE NOT NULL DEFAULT CURRENT_DATE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ
 );
@@ -27,6 +28,6 @@ CREATE TRIGGER set_entry_total_size
     FOR EACH ROW
     EXECUTE FUNCTION set_entry_total_size();
 
-CREATE INDEX entries_shelf_id_idx ON entries (shelf_id);
+CREATE INDEX entries_notebook_id_idx ON entries (notebook_id);
 
 SELECT attach_updated_at_trigger('entries');

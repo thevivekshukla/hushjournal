@@ -1,0 +1,155 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE journals\n            SET name = COALESCE($3, name),\n                key_salt = COALESCE($4, key_salt),\n                encrypted_dek = COALESCE($5, encrypted_dek),\n                passphrase_hint = CASE WHEN $6 THEN $7 ELSE passphrase_hint END,\n                mask = COALESCE($8, mask)\n            WHERE id = $1 AND user_id = $2\n            RETURNING id, user_id, name, key_salt, encrypted_dek, passphrase_hint, mask,\n                total_journal_size, size_last_calculated_at, created_at, updated_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "journals",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "journals",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "journals",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "key_salt",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "journals",
+            "name": "key_salt"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "encrypted_dek",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "journals",
+            "name": "encrypted_dek"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "passphrase_hint",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "journals",
+            "name": "passphrase_hint"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "mask",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "journals",
+            "name": "mask"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "total_journal_size",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "journals",
+            "name": "total_journal_size"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "size_last_calculated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "journals",
+            "name": "size_last_calculated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "journals",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "journals",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Bytea",
+        "Bytea",
+        "Bool",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "acd343d4f565f365cb1d72044dd5bea4d30662b0efcaf666a5ef4ceb85703269"
+}

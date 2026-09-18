@@ -6,8 +6,8 @@ members = [
     "user",
     "user_json",
     "utils",
-    "workspace",
-    "workspace_json",
+    "journal",
+    "journal_json",
 ]
 default-members = ["bin/e2ejournal"]
 resolver = "3"
@@ -44,6 +44,6 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 user = { path = "user" }
 user_json = { path = "user_json" }
 utils = { path = "utils" }
-workspace = { path = "workspace" }
-workspace_json = { path = "workspace_json" }
+journal = { path = "journal" }
+journal_json = { path = "journal_json" }
 uuid = { version = "1.26.1", features = ["serde", "v7"] }

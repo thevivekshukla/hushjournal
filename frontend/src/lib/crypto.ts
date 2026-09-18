@@ -8,7 +8,7 @@ const SALT_LEN = 16;
 const DEK_LEN = 32;
 const ARGON2 = { t: 2, m: 19_456, p: 1, dkLen: DEK_LEN, asyncTick: 16 } as const;
 
-export type Purpose = 'dek' | 'shelf.name' | 'entry.title' | 'entry.content';
+export type Purpose = 'dek' | 'notebook.name' | 'entry.title' | 'entry.content';
 
 export class CryptoError extends Error {
 	constructor(message = 'Could not decrypt') {
@@ -70,7 +70,7 @@ export async function wrapDek(passphrase: string, dek: Uint8Array) {
 	}
 }
 
-export async function createWorkspaceSecrets(passphrase: string) {
+export async function createJournalSecrets(passphrase: string) {
 	const dek = randomBytes(DEK_LEN);
 	const wrapped = await wrapDek(passphrase, dek);
 	return { dek, ...wrapped };

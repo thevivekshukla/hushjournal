@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            DELETE FROM entries e\n            USING notebooks s, journals w\n            WHERE e.id = $1\n                AND e.notebook_id = s.id\n                AND s.journal_id = w.id\n                AND w.user_id = $2\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cec5e083bbdaf907f52292db96807eadf99da2de6cb96c031073e4debf1ed894"
+}

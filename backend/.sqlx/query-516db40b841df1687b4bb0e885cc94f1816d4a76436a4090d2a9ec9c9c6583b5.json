@@ -1,0 +1,115 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO notebooks (journal_id, name, icon)\n            SELECT $1, $2, $3\n            FROM journals\n            WHERE id = $1 AND user_id = $4\n            RETURNING id, journal_id, name, icon, total_notebook_size,\n                size_last_calculated_at, created_at, updated_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "notebooks",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "journal_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "notebooks",
+            "name": "journal_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "notebooks",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "icon",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "notebooks",
+            "name": "icon"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "total_notebook_size",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "notebooks",
+            "name": "total_notebook_size"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "size_last_calculated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "notebooks",
+            "name": "size_last_calculated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "notebooks",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "notebooks",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bytea",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "516db40b841df1687b4bb0e885cc94f1816d4a76436a4090d2a9ec9c9c6583b5"
+}

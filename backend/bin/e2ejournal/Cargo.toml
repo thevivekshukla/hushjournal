@@ -20,5 +20,5 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 user_json.workspace = true
 utils.workspace = true
-workspace.workspace = true
-workspace_json.workspace = true
+journal.workspace = true
+journal_json.workspace = true

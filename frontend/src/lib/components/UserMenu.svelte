@@ -10,17 +10,17 @@
 	const user = $derived(session.user);
 	const initial = $derived(user?.name?.charAt(0).toUpperCase() ?? '?');
 
-	function goWorkspaces() {
+	function goJournals() {
 		void journal.flush();
 		session.lock();
-		journal.clearWorkspace();
-		void goto(api.workspaces());
+		journal.clearJournal();
+		void goto(api.journals());
 	}
 
 	async function logout() {
 		await journal.flush();
 		await session.logout();
-		journal.clearWorkspace();
+		journal.clearJournal();
 		void goto(api.login());
 	}
 </script>
@@ -63,10 +63,10 @@
 				<DropdownMenu.Separator class="my-1 h-px bg-base-300" />
 				<DropdownMenu.Item
 					class="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm data-highlighted:bg-base-200"
-					onSelect={goWorkspaces}
+					onSelect={goJournals}
 				>
 					<span class="icon-[lucide--layout-grid] size-4"></span>
-					Workspaces
+					Journals
 				</DropdownMenu.Item>
 				<DropdownMenu.Item
 					class="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-error data-highlighted:bg-base-200"

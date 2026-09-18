@@ -1,3 +1,2 @@
 User-agent: *
-Disallow: /workspaces
-Disallow: /w/
+Disallow: /journals

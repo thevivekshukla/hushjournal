@@ -98,7 +98,7 @@ async fn google_callback(
     let next = session
         .get::<String>("oauth_next")
         .and_then(|next| safe_next(Some(&next)))
-        .unwrap_or_else(|| "/workspaces".to_string());
+        .unwrap_or_else(|| "/journals".to_string());
     session.remove(&state.db, "oauth_state").await?;
     session.remove(&state.db, "oauth_next").await?;
 

@@ -1,8 +1,8 @@
 import { apiFetch } from './http';
 
 export const login = () => '/login';
-export const workspaces = () => '/workspaces';
-export const workspace = (id: string) => `/w/${id}`;
+export const journals = () => '/journals';
+export const journal = (id: string) => `/journals/${id}`;
 
 export const health = () => '/health';
 export const google = (next?: string) =>
@@ -12,11 +12,11 @@ export const logout = () => '/api/auth/logout';
 export const passwordLogin = () => '/api/auth/login';
 export const passwordSignup = () => '/api/auth/signup';
 export const user = () => '/api/user';
-export const workspaceCollection = () => '/api/workspaces';
-export const workspaceItem = (id: string) => `/api/workspaces/${id}`;
-export const workspaceShelves = (workspaceId: string) => `/api/workspaces/${workspaceId}/shelves`;
-export const shelf = (id: string) => `/api/shelves/${id}`;
-export const shelfEntries = (shelfId: string) => `/api/shelves/${shelfId}/entries`;
+export const journalCollection = () => '/api/journals';
+export const journalItem = (id: string) => `/api/journals/${id}`;
+export const journalNotebooks = (journalId: string) => `/api/journals/${journalId}/notebooks`;
+export const notebook = (id: string) => `/api/notebooks/${id}`;
+export const notebookEntries = (notebookId: string) => `/api/notebooks/${notebookId}/entries`;
 export const entry = (id: string) => `/api/entries/${id}`;
 
 export type ApiUser = {
@@ -28,7 +28,7 @@ export type ApiUser = {
 	google_avatar_url: string | null;
 };
 
-export type ApiWorkspace = {
+export type ApiJournal = {
 	id: string;
 	user_id: string;
 	name: string;
@@ -36,18 +36,18 @@ export type ApiWorkspace = {
 	encrypted_dek: string;
 	passphrase_hint: string | null;
 	mask: boolean;
-	total_workspace_size: number;
+	total_journal_size: number;
 	size_last_calculated_at: string | null;
 	created_at: string;
 	updated_at: string | null;
 };
 
-export type ApiShelf = {
+export type ApiNotebook = {
 	id: string;
-	workspace_id: string;
+	journal_id: string;
 	name: string;
 	icon: string | null;
-	total_shelf_size: number;
+	total_notebook_size: number;
 	size_last_calculated_at: string | null;
 	created_at: string;
 	updated_at: string | null;
@@ -55,7 +55,7 @@ export type ApiShelf = {
 
 export type ApiEntrySummary = {
 	id: string;
-	shelf_id: string;
+	notebook_id: string;
 	title: string;
 	entry_date: string;
 	created_at: string;
@@ -86,18 +86,18 @@ export const signupWithPassword = (body: { username: string; password: string })
 		body: JSON.stringify(body)
 	});
 
-export const listWorkspaces = () => apiFetch<ApiWorkspace[]>(workspaceCollection());
-export const createWorkspace = (body: {
+export const listJournals = () => apiFetch<ApiJournal[]>(journalCollection());
+export const createJournal = (body: {
 	name: string;
 	key_salt: string;
 	encrypted_dek: string;
 	passphrase_hint?: string;
 }) =>
-	apiFetch<ApiWorkspace>(workspaceCollection(), {
+	apiFetch<ApiJournal>(journalCollection(), {
 		method: 'POST',
 		body: JSON.stringify(body)
 	});
-export const updateWorkspace = (
+export const updateJournal = (
 	id: string,
 	body: {
 		name?: string;
@@ -107,27 +107,27 @@ export const updateWorkspace = (
 		encrypted_dek?: string;
 	}
 ) =>
-	apiFetch<ApiWorkspace>(workspaceItem(id), {
+	apiFetch<ApiJournal>(journalItem(id), {
 		method: 'PATCH',
 		body: JSON.stringify(body)
 	});
 
-export const listShelves = (workspaceId: string) =>
-	apiFetch<ApiShelf[]>(workspaceShelves(workspaceId));
-export const createShelf = (workspaceId: string, body: { name: string; icon?: string }) =>
-	apiFetch<ApiShelf>(workspaceShelves(workspaceId), {
+export const listNotebooks = (journalId: string) =>
+	apiFetch<ApiNotebook[]>(journalNotebooks(journalId));
+export const createNotebook = (journalId: string, body: { name: string; icon?: string }) =>
+	apiFetch<ApiNotebook>(journalNotebooks(journalId), {
 		method: 'POST',
 		body: JSON.stringify(body)
 	});
-export const updateShelf = (id: string, body: { name?: string; icon?: string }) =>
-	apiFetch<ApiShelf>(shelf(id), {
+export const updateNotebook = (id: string, body: { name?: string; icon?: string }) =>
+	apiFetch<ApiNotebook>(notebook(id), {
 		method: 'PATCH',
 		body: JSON.stringify(body)
 	});
-export const deleteShelf = (id: string) => apiFetch<void>(shelf(id), { method: 'DELETE' });
+export const deleteNotebook = (id: string) => apiFetch<void>(notebook(id), { method: 'DELETE' });
 
 export const listEntries = (
-	shelfId: string,
+	notebookId: string,
 	params: { cursor?: string | null; order?: EntryOrder; limit?: number } = {}
 ) => {
 	const search = new URLSearchParams();
@@ -136,15 +136,15 @@ export const listEntries = (
 	if (params.limit) search.set('limit', String(params.limit));
 	const query = search.toString();
 	return apiFetch<ApiEntryPage>(
-		query ? `${shelfEntries(shelfId)}?${query}` : shelfEntries(shelfId)
+		query ? `${notebookEntries(notebookId)}?${query}` : notebookEntries(notebookId)
 	);
 };
 export const getEntry = (id: string) => apiFetch<ApiEntry>(entry(id));
 export const createEntry = (
-	shelfId: string,
+	notebookId: string,
 	body: { title: string; content: string; entry_date?: string }
 ) =>
-	apiFetch<ApiEntry>(shelfEntries(shelfId), {
+	apiFetch<ApiEntry>(notebookEntries(notebookId), {
 		method: 'POST',
 		body: JSON.stringify(body)
 	});

@@ -14,7 +14,7 @@
 	let error = $state('');
 
 	$effect(() => {
-		if (session.user) void goto(api.workspaces());
+		if (session.user) void goto(api.journals());
 	});
 
 	function selectTab(next: 'signin' | 'signup') {
@@ -40,7 +40,7 @@
 				password: String(data.get('password') ?? '')
 			});
 			session.setUser(user);
-			await goto(api.workspaces());
+			await goto(api.journals());
 		} catch (cause) {
 			error = messageFrom(cause, 'Could not sign in.');
 		} finally {
@@ -66,7 +66,7 @@
 				password: nextPassword
 			});
 			session.setUser(user);
-			await goto(api.workspaces());
+			await goto(api.journals());
 		} catch (cause) {
 			error = messageFrom(cause, 'Could not sign up.');
 		} finally {
@@ -99,7 +99,7 @@
 			{/if}
 			<a
 				class="btn mt-8 h-12 w-full gap-3 rounded-full text-base btn-neutral"
-				href={api.google(api.workspaces())}
+				href={api.google(api.journals())}
 			>
 				<svg class="size-5" viewBox="0 0 24 24" aria-hidden="true">
 					<path
@@ -257,7 +257,7 @@
 				{/if}
 			</div>
 			<p class="mt-4 text-xs text-base-content/50">
-				Sign in with Google or a username and password. Your workspace passphrase never leaves this
+				Sign in with Google or a username and password. Your journal passphrase never leaves this
 				device.
 			</p>
 		</div>
