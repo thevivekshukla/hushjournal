@@ -1,3 +1,9 @@
+export const MIN_PASSPHRASE_LEN = 8;
+
+export function minPassphraseLengthError(field: string) {
+	return `${field} must be at least ${MIN_PASSPHRASE_LEN} characters.`;
+}
+
 export type PassphraseScore = 0 | 1 | 2 | 3 | 4;
 
 const LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong'] as const;

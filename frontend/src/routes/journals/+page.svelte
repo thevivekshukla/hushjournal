@@ -9,6 +9,7 @@
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import UserMenu from '$lib/components/UserMenu.svelte';
 	import { CryptoError, journal } from '$lib/journal.svelte';
+	import { MIN_PASSPHRASE_LEN, minPassphraseLengthError } from '$lib/passphrase';
 	import { session } from '$lib/session.svelte';
 	import type { JournalTheme } from '$lib/theme';
 	import { untrack } from 'svelte';
@@ -74,6 +75,10 @@
 		}
 		if (!passphrase.trim()) {
 			error = 'Choose a passphrase. It never leaves this device.';
+			return;
+		}
+		if (passphrase.length < MIN_PASSPHRASE_LEN) {
+			error = minPassphraseLengthError('Passphrase');
 			return;
 		}
 		if (passphrase !== passphraseConfirm) {
@@ -223,6 +228,7 @@
 			autocomplete="new-password"
 			describedby={passphrase ? 'journal-passphrase-strength' : undefined}
 			bind:value={passphrase}
+			minlength={MIN_PASSPHRASE_LEN}
 		/>
 		<PassphraseStrength id="journal-passphrase-strength" value={passphrase} />
 	</div>
@@ -233,6 +239,7 @@
 		autocomplete="new-password"
 		bind:value={passphraseConfirm}
 		onkeydown={(event) => event.key === 'Enter' && !busy && void create()}
+		minlength={MIN_PASSPHRASE_LEN}
 	/>
 	<p class="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
 		If you forget this passphrase, the content of this journal cannot be recovered.

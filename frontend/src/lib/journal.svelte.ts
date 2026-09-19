@@ -11,6 +11,7 @@ import {
 	wrapDek
 } from '$lib/crypto';
 import { ApiError } from '$lib/http';
+import { MIN_PASSPHRASE_LEN, minPassphraseLengthError } from '$lib/passphrase';
 import { session } from '$lib/session.svelte';
 import { journalTheme, type JournalTheme } from '$lib/theme';
 
@@ -253,6 +254,9 @@ class JournalStore {
 		passphraseHint = '',
 		theme: JournalTheme = ''
 	) {
+		if (passphrase.length < MIN_PASSPHRASE_LEN) {
+			throw new CryptoError(minPassphraseLengthError('Passphrase'));
+		}
 		const secrets = await createJournalSecrets(passphrase);
 		const hint = passphraseHint.trim();
 		try {
@@ -317,6 +321,9 @@ class JournalStore {
 	}
 
 	async changeJournalPassphrase(id: string, currentPassphrase: string, nextPassphrase: string) {
+		if (nextPassphrase.length < MIN_PASSPHRASE_LEN) {
+			throw new CryptoError(minPassphraseLengthError('New passphrase'));
+		}
 		const journal = this.getJournal(id);
 		if (!journal) throw new Error('Journal not found.');
 		const sessionDek = session.requireDek();

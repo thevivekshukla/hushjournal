@@ -7,7 +7,8 @@
 		autocomplete,
 		describedby,
 		onkeydown,
-		autofocus = false
+		autofocus = false,
+		minlength
 	}: {
 		value?: string;
 		id: string;
@@ -17,6 +18,7 @@
 		describedby?: string;
 		onkeydown?: (event: KeyboardEvent) => void;
 		autofocus?: boolean;
+		minlength?: number;
 	} = $props();
 
 	let visible = $state(false);
@@ -48,5 +50,6 @@
 		bind:value
 		{onkeydown}
 		{autofocus}
+		{minlength}
 	/>
 </div>
