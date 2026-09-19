@@ -10,6 +10,7 @@ import {
 	unlockDek,
 	wrapDek
 } from '$lib/crypto';
+import { ApiError } from '$lib/http';
 import { session } from '$lib/session.svelte';
 
 export type Journal = {
@@ -167,11 +168,12 @@ class JournalStore {
 	loading = $state(false);
 	loadingMore = $state(false);
 	hasMore = $state(false);
+	notebooksLoadedFor = $state<string | null>(null);
 	entryOrder = $state<api.EntryOrder>('desc');
 	error = $state<string | null>(null);
 	#saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 	#dirty = new Set<string>();
-	#contentLoads = new Set<string>();
+	#contentLoads = new Map<string, Promise<Entry | null>>();
 	#nextCursor: string | null = null;
 
 	getJournal(id: string) {
@@ -199,6 +201,7 @@ class JournalStore {
 		this.error = null;
 		this.hasMore = false;
 		this.loadingMore = false;
+		this.notebooksLoadedFor = null;
 		this.#nextCursor = null;
 	}
 
@@ -312,6 +315,7 @@ class JournalStore {
 		this.error = null;
 		try {
 			this.notebooks = (await api.listNotebooks(journalId)).map((row) => mapNotebook(row, dek));
+			this.notebooksLoadedFor = journalId;
 		} catch (error) {
 			this.error = error instanceof Error ? error.message : 'Could not load notebooks.';
 			throw error;
@@ -375,9 +379,17 @@ class JournalStore {
 				);
 				this.entries = [...this.entries, ...incoming.filter((entry) => !seen.has(entry.id))];
 			} else {
+				const incomingIds = new Set(incoming.map((entry) => entry.id));
+				const kept = this.entries.filter(
+					(entry) =>
+						entry.notebookId === notebookId &&
+						!incomingIds.has(entry.id) &&
+						(entry.contentLoaded || this.#dirty.has(entry.id))
+				);
 				this.entries = [
 					...this.entries.filter((entry) => entry.notebookId !== notebookId),
-					...incoming
+					...incoming,
+					...kept
 				];
 			}
 			this.#nextCursor = page.next_cursor;
@@ -394,27 +406,41 @@ class JournalStore {
 		await this.loadEntries(notebookId, { cursor: this.#nextCursor, append: true });
 	}
 
-	async ensureContent(id: string) {
-		const dek = session.dek;
+	async loadEntry(id: string): Promise<Entry | null> {
 		const current = this.entry(id);
-		if (!dek || !current || current.contentLoaded || this.#contentLoads.has(id)) return;
-		this.#contentLoads.add(id);
+		if (current?.contentLoaded) return current;
+		const pending = this.#contentLoads.get(id);
+		if (pending) return pending;
+		const promise = this.#fetchEntry(id);
+		this.#contentLoads.set(id, promise);
+		try {
+			return await promise;
+		} finally {
+			this.#contentLoads.delete(id);
+		}
+	}
+
+	async #fetchEntry(id: string): Promise<Entry | null> {
+		const dek = session.dek;
+		if (!dek) return null;
 		try {
 			const row = await api.getEntry(id);
 			const previous = this.entry(id);
-			if (!previous) return;
-			if (this.#dirty.has(id)) {
+			if (previous && this.#dirty.has(id)) {
 				this.entries = this.entries.map((entry) =>
 					entry.id === id ? { ...entry, contentLoaded: true } : entry
 				);
-				return;
+				return this.entry(id) ?? previous;
 			}
 			const loaded = mapFullEntry(row, dek, previous);
-			this.entries = this.entries.map((entry) => (entry.id === id ? loaded : entry));
+			this.entries = previous
+				? this.entries.map((entry) => (entry.id === id ? loaded : entry))
+				: [...this.entries, loaded];
+			return loaded;
 		} catch (error) {
+			if (error instanceof ApiError && error.status === 404) return null;
 			this.error = error instanceof Error ? error.message : 'Could not load the note.';
-		} finally {
-			this.#contentLoads.delete(id);
+			throw error;
 		}
 	}
 

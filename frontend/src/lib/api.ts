@@ -3,6 +3,10 @@ import { apiFetch } from './http';
 export const login = () => '/login';
 export const journals = () => '/journals';
 export const journal = (id: string) => `/journals/${id}`;
+export const journalNotebook = (journalId: string, notebookId: string) =>
+	`/journals/${journalId}/notebook/${notebookId}`;
+export const journalEntry = (journalId: string, notebookId: string, entryId: string) =>
+	`/journals/${journalId}/notebook/${notebookId}/entry/${entryId}`;
 
 export const health = () => '/health';
 export const google = (next?: string) =>
