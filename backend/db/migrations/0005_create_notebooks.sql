@@ -1,4 +1,4 @@
-CREATE TABLE notebooks (
+CREATE TABLE IF NOT EXISTS notebooks (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
     journal_id UUID NOT NULL REFERENCES journals (id) ON DELETE CASCADE,
     name BYTEA NOT NULL,
@@ -10,9 +10,11 @@ CREATE TABLE notebooks (
 );
 
 ALTER TABLE notebooks
+    DROP CONSTRAINT IF EXISTS notebooks_name_len_check;
+ALTER TABLE notebooks
     ADD CONSTRAINT notebooks_name_len_check CHECK (octet_length(name) <= 256);
 
-CREATE INDEX notebooks_journal_id_idx ON notebooks (journal_id);
+CREATE INDEX IF NOT EXISTS notebooks_journal_id_idx ON notebooks (journal_id);
 
 CREATE OR REPLACE FUNCTION check_notebooks_max_per_journal()
 RETURNS trigger
@@ -31,6 +33,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS notebooks_max_per_journal ON notebooks;
 CREATE TRIGGER notebooks_max_per_journal
     BEFORE INSERT OR UPDATE OF journal_id ON notebooks
     FOR EACH ROW

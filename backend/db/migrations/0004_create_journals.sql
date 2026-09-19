@@ -1,4 +1,4 @@
-CREATE TABLE journals (
+CREATE TABLE IF NOT EXISTS journals (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
     user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE journals (
     )
 );
 
-CREATE INDEX journals_user_id_idx ON journals (user_id);
+CREATE INDEX IF NOT EXISTS journals_user_id_idx ON journals (user_id);
 
 CREATE OR REPLACE FUNCTION check_journals_max_per_user()
 RETURNS trigger
@@ -60,6 +60,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS journals_max_per_user ON journals;
 CREATE TRIGGER journals_max_per_user
     BEFORE INSERT OR UPDATE OF user_id ON journals
     FOR EACH ROW

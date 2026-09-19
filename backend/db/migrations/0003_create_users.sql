@@ -1,4 +1,4 @@
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
     name TEXT NOT NULL,
     username TEXT,
@@ -15,9 +15,9 @@ CREATE TABLE users (
     updated_at TIMESTAMPTZ
 );
 
-CREATE UNIQUE INDEX users_email_key ON users (email) WHERE email IS NOT NULL;
-CREATE UNIQUE INDEX users_google_account_id_key ON users (google_account_id)
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_key ON users (email) WHERE email IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS users_google_account_id_key ON users (google_account_id)
     WHERE google_account_id IS NOT NULL;
-CREATE UNIQUE INDEX users_username_key ON users (username) WHERE username IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS users_username_key ON users (username) WHERE username IS NOT NULL;
 
 SELECT attach_updated_at_trigger('users');

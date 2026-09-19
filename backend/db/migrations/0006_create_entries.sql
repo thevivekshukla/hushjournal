@@ -1,4 +1,4 @@
-CREATE TABLE entries (
+CREATE TABLE IF NOT EXISTS entries (
     id UUID PRIMARY KEY DEFAULT uuidv7(),
     notebook_id UUID NOT NULL REFERENCES notebooks (id) ON DELETE CASCADE,
     title BYTEA NOT NULL,
@@ -9,6 +9,9 @@ CREATE TABLE entries (
     updated_at TIMESTAMPTZ
 );
 
+ALTER TABLE entries
+    DROP CONSTRAINT IF EXISTS entries_title_len_check,
+    DROP CONSTRAINT IF EXISTS entries_content_len_check;
 ALTER TABLE entries
     ADD CONSTRAINT entries_title_len_check CHECK (octet_length(title) <= 1024),
     ADD CONSTRAINT entries_content_len_check CHECK (octet_length(content) <= 5242880);
@@ -23,11 +26,12 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS set_entry_total_size ON entries;
 CREATE TRIGGER set_entry_total_size
     BEFORE INSERT OR UPDATE ON entries
     FOR EACH ROW
     EXECUTE FUNCTION set_entry_total_size();
 
-CREATE INDEX entries_notebook_id_idx ON entries (notebook_id);
+CREATE INDEX IF NOT EXISTS entries_notebook_id_idx ON entries (notebook_id);
 
 SELECT attach_updated_at_trigger('entries');
