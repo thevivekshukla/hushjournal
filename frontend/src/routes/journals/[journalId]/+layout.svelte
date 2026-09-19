@@ -186,7 +186,8 @@
 		}
 	}
 
-	async function createNotebook() {
+	async function createNotebook(event: SubmitEvent) {
+		event.preventDefault();
 		const name = newNotebookName.trim();
 		if (!name) return;
 		busy = true;
@@ -432,46 +433,52 @@
 					</button>
 				</div>
 				<nav class="flex-1 scrollbar-thin overflow-y-auto px-2 pb-4">
-					{#each notebooks as notebook (notebook.id)}
-						<div
-							class={[
-								'group flex w-full items-center rounded-xl',
-								selectedNotebook?.id === notebook.id ? 'bg-base-200' : 'hover:bg-base-200/70'
-							]}
-						>
-							<a
-								href={api.journalNotebook(journalId, notebook.id)}
-								data-sveltekit-noscroll
-								class={[
-									'flex min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition-colors',
-									selectedNotebook?.id === notebook.id ? 'font-medium' : 'text-base-content/80'
-								]}
-								aria-current={selectedNotebook?.id === notebook.id ? 'page' : undefined}
-								aria-label={maskOn && selectedNotebook?.id !== notebook.id
-									? 'Notebook'
-									: notebook.name}
-							>
-								<span class={[notebook.icon, 'size-4 shrink-0']}></span>
-								{#if maskOn && selectedNotebook?.id !== notebook.id}
-									<span class="inline-block h-3 w-28 rounded-full bg-base-content/20"></span>
-								{:else}
-									<span class="truncate">{notebook.name}</span>
-								{/if}
-							</a>
-							<button
-								type="button"
-								class="btn mr-1 btn-circle btn-ghost opacity-0 btn-xs group-hover:opacity-100 focus-visible:opacity-100"
-								aria-label="Edit notebook"
-								onclick={(event) => openEditNotebook(notebook, event)}
-							>
-								<span class="icon-[lucide--pencil] size-3.5"></span>
-							</button>
+					{#if journal.loadingNotebooks && notebooks.length === 0}
+						<div class="flex h-full items-center justify-center py-16">
+							<Loader label="Loading notebooks" />
 						</div>
-					{/each}
-					{#if notebooks.length === 0 && !journal.loading}
-						<p class="px-3 py-6 text-sm text-base-content/60">
-							Create a notebook to start writing.
-						</p>
+					{:else}
+						{#each notebooks as notebook (notebook.id)}
+							<div
+								class={[
+									'group flex w-full items-center rounded-xl',
+									selectedNotebook?.id === notebook.id ? 'bg-base-200' : 'hover:bg-base-200/70'
+								]}
+							>
+								<a
+									href={api.journalNotebook(journalId, notebook.id)}
+									data-sveltekit-noscroll
+									class={[
+										'flex min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition-colors',
+										selectedNotebook?.id === notebook.id ? 'font-medium' : 'text-base-content/80'
+									]}
+									aria-current={selectedNotebook?.id === notebook.id ? 'page' : undefined}
+									aria-label={maskOn && selectedNotebook?.id !== notebook.id
+										? 'Notebook'
+										: notebook.name}
+								>
+									<span class={[notebook.icon, 'size-4 shrink-0']}></span>
+									{#if maskOn && selectedNotebook?.id !== notebook.id}
+										<span class="inline-block h-3 w-28 rounded-full bg-base-content/20"></span>
+									{:else}
+										<span class="truncate">{notebook.name}</span>
+									{/if}
+								</a>
+								<button
+									type="button"
+									class="btn mr-1 btn-circle btn-ghost opacity-0 btn-xs group-hover:opacity-100 focus-visible:opacity-100"
+									aria-label="Edit notebook"
+									onclick={(event) => openEditNotebook(notebook, event)}
+								>
+									<span class="icon-[lucide--pencil] size-3.5"></span>
+								</button>
+							</div>
+						{/each}
+						{#if notebooks.length === 0}
+							<p class="px-3 py-6 text-sm text-base-content/60">
+								Create a notebook to start writing.
+							</p>
+						{/if}
 					{/if}
 				</nav>
 			</aside>
@@ -483,6 +490,11 @@
 				]}
 			>
 				<div class="flex gap-2 overflow-x-auto px-3 pt-3 lg:hidden">
+					{#if journal.loadingNotebooks && notebooks.length === 0}
+						<div class="flex h-8 items-center px-1">
+							<Loader label="Loading notebooks" size="sm" />
+						</div>
+					{/if}
 					{#each notebooks as notebook (notebook.id)}
 						<a
 							href={api.journalNotebook(journalId, notebook.id)}
@@ -614,42 +626,48 @@
 	description="Notebook names are encrypted before they are stored."
 	theme={journalThemeId}
 >
-	<label class="w-full" for="new-notebook-name">
-		<span class="mb-1 block text-sm">Name</span>
-		<input
-			id="new-notebook-name"
-			name="name"
-			class="input w-full"
-			type="text"
-			autocomplete="off"
-			bind:value={newNotebookName}
-		/>
-	</label>
-	<div>
-		<p class="mb-2 text-sm">Icon</p>
-		<div class="flex flex-wrap gap-2">
-			{#each NOTEBOOK_ICONS as icon (icon)}
-				<button
-					type="button"
-					class={['btn btn-square btn-sm', newNotebookIcon === icon ? 'btn-neutral' : 'btn-ghost']}
-					aria-label="Notebook icon"
-					onclick={() => (newNotebookIcon = icon)}
-				>
-					<span class={[icon, 'size-4']}></span>
-				</button>
-			{/each}
+	<form
+		id="new-notebook-form"
+		class="flex flex-col gap-3"
+		onsubmit={(event) => void createNotebook(event)}
+	>
+		<label class="w-full" for="new-notebook-name">
+			<span class="mb-1 block text-sm">Name</span>
+			<!-- svelte-ignore a11y_autofocus -->
+			<input
+				id="new-notebook-name"
+				name="name"
+				class="input w-full"
+				type="text"
+				autocomplete="off"
+				bind:value={newNotebookName}
+				autofocus
+			/>
+		</label>
+		<div>
+			<p class="mb-2 text-sm">Icon</p>
+			<div class="flex flex-wrap gap-2">
+				{#each NOTEBOOK_ICONS as icon (icon)}
+					<button
+						type="button"
+						class={[
+							'btn btn-square btn-sm',
+							newNotebookIcon === icon ? 'btn-neutral' : 'btn-ghost'
+						]}
+						aria-label="Notebook icon"
+						onclick={() => (newNotebookIcon = icon)}
+					>
+						<span class={[icon, 'size-4']}></span>
+					</button>
+				{/each}
+			</div>
 		</div>
-	</div>
+	</form>
 	{#snippet footer()}
 		<button type="button" class="btn btn-ghost" onclick={() => (notebookOpen = false)}
 			>Cancel</button
 		>
-		<button
-			type="button"
-			class="btn btn-neutral"
-			onclick={() => void createNotebook()}
-			disabled={busy}
-		>
+		<button type="submit" form="new-notebook-form" class="btn btn-neutral" disabled={busy}>
 			Create
 		</button>
 	{/snippet}

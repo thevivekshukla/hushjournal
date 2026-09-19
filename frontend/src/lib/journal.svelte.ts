@@ -169,6 +169,7 @@ class JournalStore {
 	notebooks = $state.raw<Notebook[]>([]);
 	entries = $state.raw<Entry[]>([]);
 	loading = $state(false);
+	loadingNotebooks = $state(false);
 	loadingEntries = $state(false);
 	loadingMore = $state(false);
 	hasMore = $state(false);
@@ -180,6 +181,7 @@ class JournalStore {
 	#contentLoads = new Map<string, Promise<Entry | null>>();
 	#nextCursor: string | null = null;
 	#entriesLoad = 0;
+	#notebooksLoad = 0;
 
 	getJournal(id: string) {
 		return this.journals.find((item) => item.id === id);
@@ -205,11 +207,13 @@ class JournalStore {
 		this.entries = [];
 		this.error = null;
 		this.hasMore = false;
+		this.loadingNotebooks = false;
 		this.loadingEntries = false;
 		this.loadingMore = false;
 		this.notebooksLoadedFor = null;
 		this.#nextCursor = null;
 		this.#entriesLoad += 1;
+		this.#notebooksLoad += 1;
 	}
 
 	async loadJournals() {
@@ -345,16 +349,20 @@ class JournalStore {
 	async loadNotebooks(journalId: string) {
 		const dek = session.dek;
 		if (!dek) return;
-		this.loading = true;
+		this.loadingNotebooks = true;
+		this.#notebooksLoad += 1;
+		const load = this.#notebooksLoad;
 		this.error = null;
 		try {
-			this.notebooks = (await api.listNotebooks(journalId)).map((row) => mapNotebook(row, dek));
+			const rows = (await api.listNotebooks(journalId)).map((row) => mapNotebook(row, dek));
+			if (load !== this.#notebooksLoad) return;
+			this.notebooks = rows;
 			this.notebooksLoadedFor = journalId;
 		} catch (error) {
 			this.error = error instanceof Error ? error.message : 'Could not load notebooks.';
 			throw error;
 		} finally {
-			this.loading = false;
+			if (load === this.#notebooksLoad) this.loadingNotebooks = false;
 		}
 	}
 
