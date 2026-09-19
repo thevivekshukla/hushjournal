@@ -143,7 +143,7 @@
 			{#each journal.journals as item (item.id)}
 				<button
 					type="button"
-					class="card border border-base-300 bg-base-100 text-left text-base-content transition-colors hover:bg-base-200"
+					class="card cursor-pointer border border-base-300 bg-base-100 text-left text-base-content transition-colors hover:bg-base-200"
 					data-theme={item.theme || undefined}
 					onclick={() => openUnlock(item.id)}
 				>
@@ -163,7 +163,7 @@
 
 			<button
 				type="button"
-				class="card border border-dashed border-base-300 text-left text-base-content/70 transition-colors hover:border-base-content/30 hover:text-base-content"
+				class="card cursor-pointer border border-dashed border-base-300 text-left text-base-content/70 transition-colors hover:border-base-content/30 hover:text-base-content"
 				onclick={openCreate}
 			>
 				<div class="card-body items-start justify-center gap-2 p-5">

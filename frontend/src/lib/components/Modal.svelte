@@ -32,24 +32,28 @@
 		/>
 		<Dialog.Content
 			class={[
-				'fixed top-1/2 left-1/2 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-base-300 bg-base-100 p-6 shadow-xl',
+				'fixed top-1/2 left-1/2 flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-base-300 bg-base-100 p-6 shadow-xl',
 				nested ? 'z-[60]' : 'z-50'
 			]}
 			data-theme={theme || undefined}
 		>
-			<Dialog.Title class="font-serif text-xl font-semibold tracking-tight">{title}</Dialog.Title>
+			<Dialog.Title class="shrink-0 pr-10 font-serif text-xl font-semibold tracking-tight"
+				>{title}</Dialog.Title
+			>
 			{#if description}
-				<Dialog.Description class="mt-1 text-sm text-base-content/70"
+				<Dialog.Description class="mt-1 shrink-0 text-sm text-base-content/70"
 					>{description}</Dialog.Description
 				>
 			{/if}
 			{#if children}
-				<div class="mt-5 flex flex-col gap-3">
-					{@render children()}
+				<div class="mt-5 min-h-0 overflow-y-auto overscroll-contain">
+					<div class="flex flex-col gap-3">
+						{@render children()}
+					</div>
 				</div>
 			{/if}
 			{#if footer}
-				<div class="mt-6 flex justify-end gap-2">
+				<div class="mt-6 flex shrink-0 justify-end gap-2">
 					{@render footer()}
 				</div>
 			{/if}
