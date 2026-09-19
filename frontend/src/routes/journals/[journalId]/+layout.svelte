@@ -8,6 +8,7 @@
 	import UserMenu from '$lib/components/UserMenu.svelte';
 	import JournalEditModal from '$lib/components/JournalEditModal.svelte';
 	import {
+		CryptoError,
 		NOTEBOOK_ICONS,
 		formatBytes,
 		formatEntryDate,
@@ -33,6 +34,9 @@
 	let editHint = $state('');
 	let editMask = $state(false);
 	let busy = $state(false);
+	let passphrase = $state('');
+	let unlockError = $state('');
+	let unlockBusy = $state(false);
 
 	const journalId = $derived(page.params.journalId ?? '');
 	const notebookId = $derived(page.params.notebookId ?? '');
@@ -70,9 +74,25 @@
 			void goto(api.login());
 			return;
 		}
-		if (session.unlockedJournalId !== journalId) {
-			void goto(api.journals());
-		}
+		if (session.unlockedJournalId === journalId) return;
+		const id = journalId;
+		untrack(() => {
+			if (session.unlockedJournalId) {
+				void journal.flush();
+				session.lock();
+				journal.clearJournal();
+			}
+			void journal
+				.loadJournal(id)
+				.then((loaded) => {
+					if (!loaded && page.params.journalId === id) {
+						void goto(api.journals(), { replaceState: true });
+					}
+				})
+				.catch(() => {
+					// loadJournal already records journal.error
+				});
+		});
 	});
 
 	$effect(() => {
@@ -213,6 +233,7 @@
 	function onKeydown(event: KeyboardEvent) {
 		const target = event.target as HTMLElement | null;
 		if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName)) return;
+		if (!unlocked) return;
 		if (event.key === 'n' && !event.metaKey && !event.ctrlKey) {
 			event.preventDefault();
 			void writeToday();
@@ -234,6 +255,23 @@
 		void goto(api.journals());
 	}
 
+	async function unlockJournal() {
+		if (!passphrase.trim() || !activeJournal) {
+			unlockError = 'Enter the journal passphrase.';
+			return;
+		}
+		unlockBusy = true;
+		unlockError = '';
+		try {
+			await journal.unlockJournal(activeJournal, passphrase);
+			passphrase = '';
+		} catch (cause) {
+			unlockError = cause instanceof CryptoError ? cause.message : 'Could not unlock this journal.';
+		} finally {
+			unlockBusy = false;
+		}
+	}
+
 	function onPageHide() {
 		void journal.flush();
 	}
@@ -247,7 +285,66 @@
 
 <NoIndex />
 
-{#if unlocked && activeJournal}
+{#if session.user && !unlocked}
+	<div class="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 py-6">
+		<header class="flex items-center justify-between gap-3">
+			<button
+				type="button"
+				class="btn gap-2 btn-ghost px-2 btn-sm"
+				onclick={() => goto(api.journals())}
+			>
+				<span class="icon-[lucide--arrow-left] size-4"></span>
+				<span>Journals</span>
+			</button>
+			<div class="flex items-center gap-1">
+				<ThemeToggle />
+				<UserMenu compact />
+			</div>
+		</header>
+		<div class="flex flex-1 flex-col justify-center pb-16">
+			{#if journal.loading && !activeJournal}
+				<p class="text-center text-sm text-base-content/60">Loading journal…</p>
+			{:else if journal.error && !activeJournal}
+				<p class="text-center text-sm text-error">{journal.error}</p>
+			{:else if activeJournal}
+				<h1 class="font-serif text-3xl tracking-tight">{activeJournal.name}</h1>
+				<p class="mt-2 text-sm text-base-content/60">
+					Enter the passphrase to unlock this journal. It stays on this device.
+				</p>
+				<form
+					class="mt-8 flex flex-col gap-4"
+					onsubmit={(event) => {
+						event.preventDefault();
+						void unlockJournal();
+					}}
+				>
+					{#if activeJournal.passphraseHint}
+						<p class="text-sm text-base-content/70">Hint: {activeJournal.passphraseHint}</p>
+					{/if}
+					<label class="w-full" for="deep-journal-unlock-passphrase">
+						<span class="mb-1 block text-sm">Passphrase</span>
+						<!-- svelte-ignore a11y_autofocus -->
+						<input
+							id="deep-journal-unlock-passphrase"
+							name="passphrase"
+							class="input w-full"
+							type="password"
+							autocomplete="current-password"
+							bind:value={passphrase}
+							autofocus
+						/>
+					</label>
+					{#if unlockError}
+						<p class="text-sm text-error">{unlockError}</p>
+					{/if}
+					<button type="submit" class="btn rounded-full btn-neutral" disabled={unlockBusy}>
+						{unlockBusy ? 'Unlocking…' : 'Unlock'}
+					</button>
+				</form>
+			{/if}
+		</div>
+	</div>
+{:else if unlocked && activeJournal}
 	<div class="flex h-dvh min-h-0 flex-col">
 		<header class="flex h-14 shrink-0 items-center gap-2 border-b border-base-300 px-3">
 			{#if entryId && notebookId}

@@ -91,6 +91,7 @@ export const signupWithPassword = (body: { username: string; password: string })
 	});
 
 export const listJournals = () => apiFetch<ApiJournal[]>(journalCollection());
+export const getJournal = (id: string) => apiFetch<ApiJournal>(journalItem(id));
 export const createJournal = (body: {
 	name: string;
 	key_salt: string;

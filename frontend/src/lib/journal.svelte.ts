@@ -218,6 +218,24 @@ class JournalStore {
 		}
 	}
 
+	async loadJournal(id: string) {
+		const existing = this.getJournal(id);
+		if (existing) return existing;
+		this.loading = true;
+		this.error = null;
+		try {
+			const row = mapJournal(await api.getJournal(id));
+			this.journals = [row, ...this.journals.filter((item) => item.id !== row.id)];
+			return row;
+		} catch (error) {
+			if (error instanceof ApiError && error.status === 404) return null;
+			this.error = error instanceof Error ? error.message : 'Could not load this journal.';
+			throw error;
+		} finally {
+			this.loading = false;
+		}
+	}
+
 	async createJournal(name: string, passphrase: string, passphraseHint = '') {
 		const secrets = await createJournalSecrets(passphrase);
 		const hint = passphraseHint.trim();
