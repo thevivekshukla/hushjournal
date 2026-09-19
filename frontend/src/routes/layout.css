@@ -25,6 +25,22 @@ textarea.journal-body {
 	box-shadow: none;
 }
 
+.input:focus,
+.input:focus-within {
+	outline: none;
+	box-shadow:
+		0 1px color-mix(in oklab, var(--input-color) calc(var(--depth) * 10%), #0000) inset,
+		0 -1px oklch(100% 0 0 / calc(var(--depth) * 0.1)) inset;
+}
+
+@media (forced-colors: active) {
+	.input:focus,
+	.input:focus-within {
+		outline: 2px solid CanvasText;
+		outline-offset: 2px;
+	}
+}
+
 .journal-title::placeholder,
 textarea.journal-body::placeholder {
 	color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
