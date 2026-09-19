@@ -5,6 +5,7 @@
 	import Loader from '$lib/components/Loader.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import NoIndex from '$lib/components/NoIndex.svelte';
+	import PassphraseField from '$lib/components/PassphraseField.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import UserMenu from '$lib/components/UserMenu.svelte';
 	import JournalEditModal from '$lib/components/JournalEditModal.svelte';
@@ -354,19 +355,14 @@
 					{#if activeJournal.passphraseHint}
 						<p class="text-sm text-base-content/70">Hint: {activeJournal.passphraseHint}</p>
 					{/if}
-					<label class="w-full" for="deep-journal-unlock-passphrase">
-						<span class="mb-1 block text-sm">Passphrase</span>
-						<!-- svelte-ignore a11y_autofocus -->
-						<input
-							id="deep-journal-unlock-passphrase"
-							name="passphrase"
-							class="input w-full"
-							type="password"
-							autocomplete="current-password"
-							bind:value={passphrase}
-							autofocus
-						/>
-					</label>
+					<PassphraseField
+						id="deep-journal-unlock-passphrase"
+						name="passphrase"
+						label="Passphrase"
+						autocomplete="current-password"
+						bind:value={passphrase}
+						autofocus
+					/>
 					{#if unlockError}
 						<p class="text-sm text-error">{unlockError}</p>
 					{/if}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import * as api from '$lib/api';
+	import PassphraseStrength from '$lib/components/PassphraseStrength.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import { ApiError } from '$lib/http';
 	import { session } from '$lib/session.svelte';
@@ -231,8 +232,10 @@
 								minlength={8}
 								maxlength={128}
 								enterkeyhint="next"
+								aria-describedby={password ? 'signup-password-strength' : undefined}
 								bind:value={password}
 							/>
+							<PassphraseStrength id="signup-password-strength" value={password} />
 						</div>
 						<label class="w-full" for="new-password-confirm">
 							<span class="mb-1 block text-sm">Confirm password</span>

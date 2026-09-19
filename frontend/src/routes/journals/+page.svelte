@@ -2,6 +2,8 @@
 	import { goto } from '$app/navigation';
 	import * as api from '$lib/api';
 	import Modal from '$lib/components/Modal.svelte';
+	import PassphraseField from '$lib/components/PassphraseField.svelte';
+	import PassphraseStrength from '$lib/components/PassphraseStrength.svelte';
 	import ThemePicker from '$lib/components/ThemePicker.svelte';
 	import NoIndex from '$lib/components/NoIndex.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
@@ -177,18 +179,14 @@
 	{#if pendingJournal?.passphraseHint}
 		<p class="text-sm text-base-content/70">Hint: {pendingJournal.passphraseHint}</p>
 	{/if}
-	<label class="w-full" for="journal-unlock-passphrase">
-		<span class="mb-1 block text-sm">Passphrase</span>
-		<input
-			id="journal-unlock-passphrase"
-			name="passphrase"
-			class="input w-full"
-			type="password"
-			autocomplete="current-password"
-			bind:value={passphrase}
-			onkeydown={(event) => event.key === 'Enter' && !busy && void unlock()}
-		/>
-	</label>
+	<PassphraseField
+		id="journal-unlock-passphrase"
+		name="passphrase"
+		label="Passphrase"
+		autocomplete="current-password"
+		bind:value={passphrase}
+		onkeydown={(event) => event.key === 'Enter' && !busy && void unlock()}
+	/>
 	{#if error}
 		<p class="text-sm text-error">{error}</p>
 	{/if}
@@ -217,29 +215,25 @@
 			bind:value={newName}
 		/>
 	</label>
-	<label class="w-full" for="journal-passphrase">
-		<span class="mb-1 block text-sm">Passphrase</span>
-		<input
+	<div class="w-full">
+		<PassphraseField
 			id="journal-passphrase"
 			name="new-passphrase"
-			class="input w-full"
-			type="password"
+			label="Passphrase"
 			autocomplete="new-password"
+			describedby={passphrase ? 'journal-passphrase-strength' : undefined}
 			bind:value={passphrase}
 		/>
-	</label>
-	<label class="w-full" for="journal-passphrase-confirm">
-		<span class="mb-1 block text-sm">Confirm passphrase</span>
-		<input
-			id="journal-passphrase-confirm"
-			name="new-passphrase-confirm"
-			class="input w-full"
-			type="password"
-			autocomplete="new-password"
-			bind:value={passphraseConfirm}
-			onkeydown={(event) => event.key === 'Enter' && !busy && void create()}
-		/>
-	</label>
+		<PassphraseStrength id="journal-passphrase-strength" value={passphrase} />
+	</div>
+	<PassphraseField
+		id="journal-passphrase-confirm"
+		name="new-passphrase-confirm"
+		label="Confirm passphrase"
+		autocomplete="new-password"
+		bind:value={passphraseConfirm}
+		onkeydown={(event) => event.key === 'Enter' && !busy && void create()}
+	/>
 	<p class="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
 		If you forget this passphrase, the content of this journal cannot be recovered.
 	</p>
