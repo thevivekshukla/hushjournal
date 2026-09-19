@@ -2,6 +2,7 @@
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import * as api from '$lib/api';
+	import Loader from '$lib/components/Loader.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import NoIndex from '$lib/components/NoIndex.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
@@ -140,6 +141,20 @@
 		} catch (cause) {
 			journal.error = cause instanceof Error ? cause.message : 'Could not load more notes.';
 		}
+	}
+
+	function fetchEntry(id: string) {
+		void journal.loadEntry(id, { force: true });
+	}
+
+	function onEntryPointerDown(event: PointerEvent, id: string) {
+		if (event.button !== 0) return;
+		fetchEntry(id);
+	}
+
+	function onEntryClick(event: MouseEvent, id: string) {
+		if (event.detail !== 0) return;
+		fetchEntry(id);
 	}
 
 	function loadMoreSentinel(_key: string): Attachment {
@@ -537,43 +552,51 @@
 					</div>
 				</div>
 				<div class="flex-1 scrollbar-thin overflow-y-auto px-2 pb-4">
-					{#each entries as entry (entry.id)}
-						<a
-							href={selectedNotebook
-								? api.journalEntry(journalId, selectedNotebook.id, entry.id)
-								: api.journal(journalId)}
-							data-sveltekit-noscroll
-							class={[
-								'block w-full truncate rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors',
-								entryId === entry.id ? 'bg-base-200' : 'hover:bg-base-200/70'
-							]}
-							aria-current={entryId === entry.id ? 'page' : undefined}
-							aria-label={maskOn && entryId !== entry.id ? 'Note' : entry.title}
-						>
-							{#if maskOn && entryId !== entry.id}
-								<span class="inline-block h-3 w-28 rounded-full bg-base-content/20"></span>
-							{:else}
-								{entry.title}
-							{/if}
-						</a>
-					{:else}
-						<p class="px-3 py-8 text-sm text-base-content/60">
-							{#if selectedNotebook}
-								No entries yet. Press <kbd class="kbd kbd-sm">n</kbd> or Note.
-							{:else}
-								Pick a notebook to see notes.
-							{/if}
-						</p>
-					{/each}
-					{#if selectedNotebook && journal.hasMore}
-						<div
-							class="flex h-8 items-center justify-center"
-							{@attach loadMoreSentinel(`${selectedNotebook?.id ?? ''}:${entries.length}`)}
-						>
-							{#if journal.loadingMore}
-								<p class="text-xs text-base-content/50">Loading…</p>
-							{/if}
+					{#if journal.loadingEntries && entries.length === 0}
+						<div class="flex h-full items-center justify-center py-16">
+							<Loader label="Loading notes" />
 						</div>
+					{:else}
+						{#each entries as entry (entry.id)}
+							<a
+								href={selectedNotebook
+									? api.journalEntry(journalId, selectedNotebook.id, entry.id)
+									: api.journal(journalId)}
+								data-sveltekit-noscroll
+								class={[
+									'block w-full truncate rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors',
+									entryId === entry.id ? 'bg-base-200' : 'hover:bg-base-200/70'
+								]}
+								aria-current={entryId === entry.id ? 'page' : undefined}
+								aria-label={maskOn && entryId !== entry.id ? 'Note' : entry.title}
+								onpointerdown={(event) => onEntryPointerDown(event, entry.id)}
+								onclick={(event) => onEntryClick(event, entry.id)}
+							>
+								{#if maskOn && entryId !== entry.id}
+									<span class="inline-block h-3 w-28 rounded-full bg-base-content/20"></span>
+								{:else}
+									{entry.title}
+								{/if}
+							</a>
+						{:else}
+							<p class="px-3 py-8 text-sm text-base-content/60">
+								{#if selectedNotebook}
+									No entries yet. Press <kbd class="kbd kbd-sm">n</kbd> or Note.
+								{:else}
+									Pick a notebook to see notes.
+								{/if}
+							</p>
+						{/each}
+						{#if selectedNotebook && journal.hasMore}
+							<div
+								class="flex h-8 items-center justify-center"
+								{@attach loadMoreSentinel(`${selectedNotebook?.id ?? ''}:${entries.length}`)}
+							>
+								{#if journal.loadingMore}
+									<Loader label="Loading more notes" size="sm" />
+								{/if}
+							</div>
+						{/if}
 					{/if}
 				</div>
 			</aside>

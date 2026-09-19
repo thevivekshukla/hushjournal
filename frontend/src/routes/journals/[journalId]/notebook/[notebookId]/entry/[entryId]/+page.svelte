@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import * as api from '$lib/api';
 	import EntryEditor from '$lib/components/EntryEditor.svelte';
+	import Loader from '$lib/components/Loader.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import { journal } from '$lib/journal.svelte';
 	import { untrack } from 'svelte';
@@ -60,12 +61,14 @@
 	}
 </script>
 
-{#if entry}
+{#if entry?.contentLoaded}
 	{#key entry.id}
 		<EntryEditor {entry} onDelete={() => (deleteOpen = true)} />
 	{/key}
 {:else}
-	<div class="flex flex-1 items-center justify-center text-sm text-base-content/50">Loading…</div>
+	<div class="flex flex-1 items-center justify-center">
+		<Loader label="Loading note" />
+	</div>
 {/if}
 
 <Modal

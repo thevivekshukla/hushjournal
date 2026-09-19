@@ -169,6 +169,7 @@ class JournalStore {
 	notebooks = $state.raw<Notebook[]>([]);
 	entries = $state.raw<Entry[]>([]);
 	loading = $state(false);
+	loadingEntries = $state(false);
 	loadingMore = $state(false);
 	hasMore = $state(false);
 	notebooksLoadedFor = $state<string | null>(null);
@@ -178,6 +179,7 @@ class JournalStore {
 	#dirty = new Set<string>();
 	#contentLoads = new Map<string, Promise<Entry | null>>();
 	#nextCursor: string | null = null;
+	#entriesLoad = 0;
 
 	getJournal(id: string) {
 		return this.journals.find((item) => item.id === id);
@@ -203,9 +205,11 @@ class JournalStore {
 		this.entries = [];
 		this.error = null;
 		this.hasMore = false;
+		this.loadingEntries = false;
 		this.loadingMore = false;
 		this.notebooksLoadedFor = null;
 		this.#nextCursor = null;
+		this.#entriesLoad += 1;
 	}
 
 	async loadJournals() {
@@ -394,13 +398,17 @@ class JournalStore {
 			await this.flush();
 			this.hasMore = false;
 			this.#nextCursor = null;
+			this.loadingEntries = true;
+			this.#entriesLoad += 1;
 		}
+		const load = this.#entriesLoad;
 		this.error = null;
 		try {
 			const page = await api.listEntries(notebookId, {
 				cursor: opts.cursor,
 				order: this.entryOrder
 			});
+			if (!append && load !== this.#entriesLoad) return;
 			const previous = new Map(this.entries.map((entry) => [entry.id, entry]));
 			const incoming = page.entries.map((row) => mapEntrySummary(row, dek, previous.get(row.id)));
 			if (append) {
@@ -427,7 +435,8 @@ class JournalStore {
 		} catch (error) {
 			this.error = error instanceof Error ? error.message : 'Could not load notes.';
 		} finally {
-			this.loadingMore = false;
+			if (append) this.loadingMore = false;
+			else if (load === this.#entriesLoad) this.loadingEntries = false;
 		}
 	}
 
@@ -436,11 +445,10 @@ class JournalStore {
 		await this.loadEntries(notebookId, { cursor: this.#nextCursor, append: true });
 	}
 
-	async loadEntry(id: string): Promise<Entry | null> {
-		const current = this.entry(id);
-		if (current?.contentLoaded) return current;
+	async loadEntry(id: string, opts: { force?: boolean } = {}): Promise<Entry | null> {
 		const pending = this.#contentLoads.get(id);
 		if (pending) return pending;
+		if (!opts.force && this.entry(id)?.contentLoaded) return this.entry(id) ?? null;
 		const promise = this.#fetchEntry(id);
 		this.#contentLoads.set(id, promise);
 		try {
