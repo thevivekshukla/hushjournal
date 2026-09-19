@@ -386,7 +386,7 @@
 				<a
 					href={api.journalNotebook(journalId, notebookId)}
 					data-sveltekit-noscroll
-					class="btn btn-circle btn-ghost btn-sm md:hidden"
+					class="btn btn-circle btn-ghost btn-sm lg:hidden"
 					aria-label="Back to entries"
 				>
 					<span class="icon-[lucide--arrow-left] size-4"></span>
@@ -419,7 +419,7 @@
 		{/if}
 
 		<div class="flex min-h-0 flex-1 overflow-hidden">
-			<aside class="hidden w-56 shrink-0 flex-col border-r border-base-300 md:flex">
+			<aside class="hidden w-56 shrink-0 flex-col border-r border-base-300 lg:flex">
 				<div class="flex items-center justify-between px-3 pt-4 pb-2">
 					<p class="text-xs tracking-wide text-base-content/50 uppercase">Notebooks</p>
 					<button
@@ -478,11 +478,11 @@
 
 			<aside
 				class={[
-					'min-h-0 w-full shrink-0 flex-col border-r border-base-300 md:w-72',
-					entryId ? 'hidden md:flex' : 'flex'
+					'min-h-0 w-full shrink-0 flex-col border-r border-base-300 lg:w-72',
+					entryId ? 'hidden lg:flex' : 'flex'
 				]}
 			>
-				<div class="flex gap-2 overflow-x-auto px-3 pt-3 md:hidden">
+				<div class="flex gap-2 overflow-x-auto px-3 pt-3 lg:hidden">
 					{#each notebooks as notebook (notebook.id)}
 						<a
 							href={api.journalNotebook(journalId, notebook.id)}
@@ -601,7 +601,7 @@
 				</div>
 			</aside>
 
-			<main class={['flex min-h-0 min-w-0 flex-1 flex-col', entryId ? 'flex' : 'hidden md:flex']}>
+			<main class={['flex min-h-0 min-w-0 flex-1 flex-col', entryId ? 'flex' : 'hidden lg:flex']}>
 				{@render children()}
 			</main>
 		</div>
