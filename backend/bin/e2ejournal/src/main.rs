@@ -73,7 +73,7 @@ fn write_sample_env_to(dir: impl AsRef<std::path::Path>) -> anyhow::Result<()> {
     std::fs::write(&path, SAMPLE_ENV)
         .with_context(|| format!("failed to write {}", path.display()))?;
     println!(
-        "wrote {} with local defaults; set GOOGLE_LOGIN_OAUTH2 before running the API",
+        "wrote {} with local defaults; set GOOGLE_LOGIN_OAUTH2 to enable Google sign-in",
         path.display()
     );
     Ok(())
@@ -108,6 +108,7 @@ async fn serve() -> anyhow::Result<()> {
         .with_context(|| format!("failed to bind {}", config.bind_addr()))?;
 
     tracing::info!("listening on {}", listener.local_addr()?);
+    tracing::info!("APP_ORIGIN {}", config.app_origin);
     if spa::is_embedded() {
         tracing::info!("serving embedded SPA");
     } else {
@@ -214,6 +215,8 @@ mod tests {
             )
         );
         assert!(first.contains("GOOGLE_LOGIN_OAUTH2="));
+        assert!(first.contains("APP_ORIGIN="));
+        assert!(!first.contains("GOOGLE_OAUTH_REDIRECT_URI"));
         assert!(first.contains("DISABLE_USER_SIGNUP=false"));
         assert!(first.contains("DISABLE_PASSWORD_FORM=false"));
 

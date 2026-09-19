@@ -9,8 +9,8 @@ pub struct Config {
     pub cookie_secure: bool,
     pub disable_user_signup: bool,
     pub disable_password_form: bool,
-    pub app_origin: Option<String>,
-    pub google_oauth: GoogleOAuth,
+    pub app_origin: String,
+    pub google_oauth: Option<GoogleOAuth>,
 }
 
 impl Config {
@@ -25,16 +25,10 @@ impl Config {
         let cookie_secure = env_bool("COOKIE_SECURE", false);
         let disable_user_signup = env_bool("DISABLE_USER_SIGNUP", false);
         let disable_password_form = env_bool("DISABLE_PASSWORD_FORM", false);
-        let (google_client_id, google_client_secret) = parse_google_login_oauth2(
-            &std::env::var("GOOGLE_LOGIN_OAUTH2")
-                .context("GOOGLE_LOGIN_OAUTH2 must be set (client_id,client_secret)")?,
+        let app_origin = parse_app_origin(
+            &std::env::var("APP_ORIGIN").context("APP_ORIGIN must be set (see .env.example)")?,
         )?;
-        let google_redirect_uri = std::env::var("GOOGLE_OAUTH_REDIRECT_URI")
-            .context("GOOGLE_OAUTH_REDIRECT_URI must be set (see .env.example)")?;
-        let app_origin = match std::env::var("APP_ORIGIN") {
-            Ok(value) => parse_app_origin(&value)?,
-            Err(_) => None,
-        };
+        let google_oauth = optional_google_oauth(&app_origin)?;
 
         Ok(Self {
             database_url,
@@ -44,11 +38,7 @@ impl Config {
             disable_user_signup,
             disable_password_form,
             app_origin,
-            google_oauth: GoogleOAuth {
-                client_id: google_client_id,
-                client_secret: google_client_secret,
-                redirect_uri: google_redirect_uri,
-            },
+            google_oauth,
         })
     }
 
@@ -63,10 +53,25 @@ fn env_bool(name: &str, default: bool) -> bool {
         .unwrap_or(default)
 }
 
-fn parse_app_origin(raw: &str) -> Result<Option<String>> {
+fn optional_google_oauth(app_origin: &str) -> Result<Option<GoogleOAuth>> {
+    let Ok(raw) = std::env::var("GOOGLE_LOGIN_OAUTH2") else {
+        return Ok(None);
+    };
+    if raw.trim().is_empty() {
+        return Ok(None);
+    }
+    let (client_id, client_secret) = parse_google_login_oauth2(&raw)?;
+    Ok(Some(GoogleOAuth {
+        client_id,
+        client_secret,
+        redirect_uri: format!("{app_origin}/api/auth/google/callback"),
+    }))
+}
+
+fn parse_app_origin(raw: &str) -> Result<String> {
     let origin = raw.trim().trim_end_matches('/');
     if origin.is_empty() {
-        return Ok(None);
+        anyhow::bail!("APP_ORIGIN must be an http(s) origin like http://127.0.0.1:5173");
     }
     let Some((scheme, rest)) = origin.split_once("://") else {
         anyhow::bail!("APP_ORIGIN must be an http(s) origin like http://127.0.0.1:5173");
@@ -82,7 +87,7 @@ fn parse_app_origin(raw: &str) -> Result<Option<String>> {
     {
         anyhow::bail!("APP_ORIGIN must be an origin without a path, query, or fragment");
     }
-    Ok(Some(origin.to_string()))
+    Ok(origin.to_string())
 }
 
 fn parse_google_login_oauth2(raw: &str) -> Result<(String, String)> {

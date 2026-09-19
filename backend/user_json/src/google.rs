@@ -1,4 +1,4 @@
-use db::AppState;
+use db::GoogleOAuth;
 use errors::AppError;
 use reqwest::Url;
 use serde::Deserialize;
@@ -25,11 +25,11 @@ struct GoogleUserInfo {
     picture: Option<String>,
 }
 
-pub fn authorization_url(state: &AppState, oauth_state: &str) -> String {
+pub fn authorization_url(oauth: &GoogleOAuth, oauth_state: &str) -> String {
     let mut url = Url::parse(AUTH_URL).expect("AUTH_URL is valid");
     url.query_pairs_mut()
-        .append_pair("client_id", &state.google_oauth.client_id)
-        .append_pair("redirect_uri", &state.google_oauth.redirect_uri)
+        .append_pair("client_id", &oauth.client_id)
+        .append_pair("redirect_uri", &oauth.redirect_uri)
         .append_pair("response_type", "code")
         .append_pair("scope", SCOPES)
         .append_pair("state", oauth_state)
@@ -38,8 +38,8 @@ pub fn authorization_url(state: &AppState, oauth_state: &str) -> String {
     url.to_string()
 }
 
-pub async fn exchange_code(state: &AppState, code: &str) -> Result<GoogleAccount, AppError> {
-    let token = request_token(state, code).await?;
+pub async fn exchange_code(oauth: &GoogleOAuth, code: &str) -> Result<GoogleAccount, AppError> {
+    let token = request_token(oauth, code).await?;
     let info = request_userinfo(&token.access_token).await?;
     if info.sub.is_empty() {
         return Err(AppError::BadRequest("google login failed".into()));
@@ -55,14 +55,14 @@ pub async fn exchange_code(state: &AppState, code: &str) -> Result<GoogleAccount
     })
 }
 
-async fn request_token(state: &AppState, code: &str) -> Result<TokenResponse, AppError> {
+async fn request_token(oauth: &GoogleOAuth, code: &str) -> Result<TokenResponse, AppError> {
     let response = reqwest_client()
         .post(TOKEN_URL)
         .form(&[
             ("code", code),
-            ("client_id", state.google_oauth.client_id.as_str()),
-            ("client_secret", state.google_oauth.client_secret.as_str()),
-            ("redirect_uri", state.google_oauth.redirect_uri.as_str()),
+            ("client_id", oauth.client_id.as_str()),
+            ("client_secret", oauth.client_secret.as_str()),
+            ("redirect_uri", oauth.redirect_uri.as_str()),
             ("grant_type", "authorization_code"),
         ])
         .send()

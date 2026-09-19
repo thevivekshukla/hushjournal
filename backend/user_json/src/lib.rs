@@ -28,6 +28,7 @@ pub fn router() -> Router<AppState> {
 struct AppConfigResponse {
     disable_user_signup: bool,
     disable_password_form: bool,
+    disable_google_login: bool,
 }
 
 #[derive(Deserialize)]
@@ -59,6 +60,7 @@ async fn google_login(
     Query(query): Query<GoogleLoginQuery>,
     mut session: Session,
 ) -> Result<impl IntoResponse, AppError> {
+    let oauth = require_google_oauth(&state)?;
     let oauth_state = random_token();
     session
         .attach(&state.db, "oauth_state", &oauth_state)
@@ -69,7 +71,7 @@ async fn google_login(
         session.remove(&state.db, "oauth_next").await?;
     }
 
-    let url = google::authorization_url(&state, &oauth_state);
+    let url = google::authorization_url(oauth, &oauth_state);
     Ok((
         with_session_cookie(jar, &session, state.cookie_secure),
         Redirect::temporary(&url),
@@ -82,6 +84,7 @@ async fn google_callback(
     Query(query): Query<GoogleCallbackQuery>,
     mut session: Session,
 ) -> Result<impl IntoResponse, AppError> {
+    let oauth = require_google_oauth(&state)?;
     if query.error.as_deref() == Some("access_denied") {
         return Err(AppError::BadRequest("google login was cancelled".into()));
     }
@@ -109,7 +112,7 @@ async fn google_callback(
     session.remove(&state.db, "oauth_state").await?;
     session.remove(&state.db, "oauth_next").await?;
 
-    let account = google::exchange_code(&state, &code).await?;
+    let account = google::exchange_code(oauth, &code).await?;
     if state.disable_user_signup
         && user::get_by_google_account_id(&state.db, &account.google_account_id)
             .await?
@@ -122,13 +125,14 @@ async fn google_callback(
     tracing::info!(user_id = %user.id, "user logged in with google");
 
     let jar = with_session_cookie(jar, &session, state.cookie_secure);
-    Ok((jar, Redirect::to(&app_redirect(&state.app_origin, &next))).into_response())
+    Ok((jar, Redirect::to(&format!("{}{next}", state.app_origin))).into_response())
 }
 
 async fn app_config(State(state): State<AppState>) -> Json<AppConfigResponse> {
     Json(AppConfigResponse {
         disable_user_signup: state.disable_user_signup,
         disable_password_form: state.disable_password_form,
+        disable_google_login: state.google_oauth.is_none(),
     })
 }
 
@@ -218,6 +222,13 @@ fn with_session_cookie(jar: CookieJar, session: &Session, secure: bool) -> Cooki
     jar.add(session.cookie(secure))
 }
 
+fn require_google_oauth(state: &AppState) -> Result<&db::GoogleOAuth, AppError> {
+    state
+        .google_oauth
+        .as_ref()
+        .ok_or_else(|| AppError::BadRequest("google login is disabled".into()))
+}
+
 fn reject_if_password_form_disabled(state: &AppState) -> Result<(), AppError> {
     if state.disable_password_form {
         Err(AppError::BadRequest("password form is disabled".into()))
@@ -238,13 +249,6 @@ fn random_token() -> String {
     let mut bytes = [0u8; 32];
     rand::rng().fill_bytes(&mut bytes);
     hex::encode(bytes)
-}
-
-fn app_redirect(app_origin: &Option<String>, next: &str) -> String {
-    match app_origin {
-        Some(origin) => format!("{origin}{next}"),
-        None => next.to_string(),
-    }
 }
 
 fn safe_next(next: Option<&str>) -> Option<String> {

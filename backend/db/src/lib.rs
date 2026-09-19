@@ -21,8 +21,8 @@ pub struct AppState {
     pub cookie_secure: bool,
     pub disable_user_signup: bool,
     pub disable_password_form: bool,
-    pub app_origin: Option<String>,
-    pub google_oauth: GoogleOAuth,
+    pub app_origin: String,
+    pub google_oauth: Option<GoogleOAuth>,
 }
 
 impl AppState {
@@ -31,8 +31,8 @@ impl AppState {
         cookie_secure: bool,
         disable_user_signup: bool,
         disable_password_form: bool,
-        app_origin: Option<String>,
-        google_oauth: GoogleOAuth,
+        app_origin: String,
+        google_oauth: Option<GoogleOAuth>,
     ) -> anyhow::Result<Self> {
         let db = connect_pool(database_url).await?;
         Ok(Self {

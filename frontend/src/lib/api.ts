@@ -27,6 +27,7 @@ export const entry = (id: string) => `/api/entries/${id}`;
 export type ApiAppConfig = {
 	disable_user_signup: boolean;
 	disable_password_form: boolean;
+	disable_google_login: boolean;
 };
 
 export type ApiUser = {

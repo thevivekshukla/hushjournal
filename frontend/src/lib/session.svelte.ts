@@ -22,7 +22,8 @@ class Session {
 	user = $state.raw<User | null>(null);
 	appConfig = $state.raw<api.ApiAppConfig>({
 		disable_user_signup: false,
-		disable_password_form: false
+		disable_password_form: false,
+		disable_google_login: false
 	});
 	ready = $state(false);
 	loadError = $state<string | null>(null);
@@ -56,7 +57,7 @@ class Session {
 		this.appConfig =
 			configResult.status === 'fulfilled'
 				? configResult.value
-				: { disable_user_signup: false, disable_password_form: false };
+				: { disable_user_signup: false, disable_password_form: false, disable_google_login: false };
 		this.ready = true;
 	}
 
