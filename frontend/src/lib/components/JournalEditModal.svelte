@@ -1,7 +1,9 @@
 <script lang="ts">
 	import Modal from '$lib/components/Modal.svelte';
+	import ThemePicker from '$lib/components/ThemePicker.svelte';
 	import JournalChangePassphraseModal from '$lib/components/JournalChangePassphraseModal.svelte';
 	import { formatBytes, journal, type Journal } from '$lib/journal.svelte';
+	import type { JournalTheme } from '$lib/theme';
 
 	const NAME_MAX = 255;
 	const HINT_MAX = 255;
@@ -11,13 +13,15 @@
 		currentJournal,
 		name = $bindable(''),
 		hint = $bindable(''),
-		mask = $bindable(false)
+		mask = $bindable(false),
+		theme = $bindable('' as JournalTheme)
 	}: {
 		open?: boolean;
 		currentJournal?: Journal;
 		name?: string;
 		hint?: string;
 		mask?: boolean;
+		theme?: JournalTheme;
 	} = $props();
 
 	let error = $state('');
@@ -37,7 +41,8 @@
 			await journal.updateJournal(currentJournal.id, {
 				name: trimmed,
 				passphraseHint: hint,
-				mask
+				mask,
+				theme
 			});
 			open = false;
 		} catch (cause) {
@@ -48,7 +53,12 @@
 	}
 </script>
 
-<Modal bind:open title="Edit journal" description="Name, hint, and mask are stored as plaintext.">
+<Modal
+	bind:open
+	title="Edit journal"
+	description="Name, hint, mask, and theme are stored as plaintext."
+	theme={theme || undefined}
+>
 	<label class="w-full" for="journal-edit-name">
 		<span class="mb-1 block text-sm">Name</span>
 		<input
@@ -91,6 +101,7 @@
 			bind:checked={mask}
 		/>
 	</label>
+	<ThemePicker bind:value={theme} />
 	<button
 		type="button"
 		class="btn self-start btn-outline btn-sm"

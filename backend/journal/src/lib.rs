@@ -10,6 +10,29 @@ use errors::AppError;
 
 pub const MAX_NAME_LEN: usize = 255;
 pub const PASSPHRASE_HINT_MAX: usize = 255;
+pub const JOURNAL_THEMES: &[&str] = &[
+    "",
+    "silk",
+    "cupcake",
+    "bumblebee",
+    "emerald",
+    "corporate",
+    "nord",
+    "lemonade",
+    "winter",
+    "caramellatte",
+    "retro",
+    "dim",
+    "forest",
+    "dracula",
+    "night",
+    "coffee",
+    "synthwave",
+    "abyss",
+    "luxury",
+    "halloween",
+    "sunset",
+];
 pub const MAX_ICON_LEN: usize = 128;
 pub const KEY_SALT_MAX: usize = 1024;
 pub const ENCRYPTED_DEK_MAX: usize = 8192;
@@ -53,6 +76,8 @@ fn check_violation_message(message: &str) -> String {
         "a journal cannot have more than 100 notebooks".into()
     } else if message.contains("journals_passphrase_hint") {
         "passphrase hint is too long".into()
+    } else if message.contains("journals_theme") {
+        "invalid theme".into()
     } else if message.contains("notebooks_name_len") {
         "notebook name is too long".into()
     } else if message.contains("entries_title_len") {

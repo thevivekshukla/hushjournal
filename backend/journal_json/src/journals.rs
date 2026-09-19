@@ -23,6 +23,7 @@ struct CreateJournal {
     #[serde(with = "journal::b64")]
     encrypted_dek: Vec<u8>,
     passphrase_hint: Option<String>,
+    theme: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -34,6 +35,7 @@ struct UpdateJournal {
     encrypted_dek: Option<Vec<u8>>,
     passphrase_hint: Option<String>,
     mask: Option<bool>,
+    theme: Option<String>,
 }
 
 async fn list(
@@ -63,6 +65,7 @@ async fn create(
         &body.key_salt,
         &body.encrypted_dek,
         body.passphrase_hint.as_deref(),
+        body.theme.as_deref(),
     )
     .await?;
     tracing::info!(journal_id = %journal.id, user_id = %user_id, "journal created");
@@ -85,6 +88,7 @@ async fn update(
             body.encrypted_dek.as_deref(),
             body.passphrase_hint.as_deref(),
             body.mask,
+            body.theme.as_deref(),
         )
         .await?,
     ))

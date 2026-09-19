@@ -2,11 +2,13 @@
 	import { goto } from '$app/navigation';
 	import * as api from '$lib/api';
 	import Modal from '$lib/components/Modal.svelte';
+	import ThemePicker from '$lib/components/ThemePicker.svelte';
 	import NoIndex from '$lib/components/NoIndex.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import UserMenu from '$lib/components/UserMenu.svelte';
 	import { CryptoError, journal } from '$lib/journal.svelte';
 	import { session } from '$lib/session.svelte';
+	import type { JournalTheme } from '$lib/theme';
 	import { untrack } from 'svelte';
 
 	const HINT_MAX = 255;
@@ -18,6 +20,7 @@
 	let passphrase = $state('');
 	let passphraseConfirm = $state('');
 	let hint = $state('');
+	let newTheme = $state<JournalTheme>('');
 	let error = $state('');
 	let busy = $state(false);
 
@@ -78,12 +81,13 @@
 		busy = true;
 		error = '';
 		try {
-			const created = await journal.createJournal(name, passphrase, hint);
+			const created = await journal.createJournal(name, passphrase, hint, newTheme);
 			createOpen = false;
 			newName = '';
 			passphrase = '';
 			passphraseConfirm = '';
 			hint = '';
+			newTheme = '';
 			void goto(api.journal(created.id));
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : 'Could not create the journal.';
@@ -98,6 +102,7 @@
 		passphrase = '';
 		passphraseConfirm = '';
 		hint = '';
+		newTheme = '';
 		createOpen = true;
 	}
 </script>
@@ -131,7 +136,8 @@
 			{#each journal.journals as item (item.id)}
 				<button
 					type="button"
-					class="card border border-base-300 bg-base-200/70 text-left transition-colors hover:bg-base-200"
+					class="card border border-base-300 bg-base-100 text-left text-base-content transition-colors hover:bg-base-200"
+					data-theme={item.theme || undefined}
 					onclick={() => openUnlock(item.id)}
 				>
 					<div class="card-body gap-3 p-5">
@@ -166,6 +172,7 @@
 	bind:open={unlockOpen}
 	title="Unlock {pendingJournal?.name ?? 'journal'}"
 	description="The passphrase stays on this device. The server never sees it."
+	theme={pendingJournal?.theme || undefined}
 >
 	{#if pendingJournal?.passphraseHint}
 		<p class="text-sm text-base-content/70">Hint: {pendingJournal.passphraseHint}</p>
@@ -197,6 +204,7 @@
 	bind:open={createOpen}
 	title="New journal"
 	description="Give it a name and a passphrase. Both encryption keys are derived on this device."
+	theme={newTheme || undefined}
 >
 	<label class="w-full" for="journal-name">
 		<span class="mb-1 block text-sm">Name</span>
@@ -248,6 +256,7 @@
 		/>
 		<span class="mt-1 block text-xs text-base-content/50">Shown before unlock. Not encrypted.</span>
 	</label>
+	<ThemePicker bind:value={newTheme} />
 	{#if error}
 		<p class="text-sm text-error">{error}</p>
 	{/if}

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT id, user_id, name, key_salt, encrypted_dek, passphrase_hint, mask,\n                total_journal_size, size_last_calculated_at, created_at, updated_at\n            FROM journals\n            WHERE user_id = $1\n            ORDER BY created_at DESC, id DESC\n        ",
+  "query": "\n            SELECT id, user_id, name, key_salt, encrypted_dek, passphrase_hint, mask, theme,\n                total_journal_size, size_last_calculated_at, created_at, updated_at\n            FROM journals\n            WHERE id = $1 AND user_id = $2\n        ",
   "describe": {
     "columns": [
       {
@@ -82,6 +82,17 @@
       },
       {
         "ordinal": 7,
+        "name": "theme",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "journals",
+            "name": "theme"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
         "name": "total_journal_size",
         "type_info": "Int8",
         "origin": {
@@ -92,7 +103,7 @@
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "size_last_calculated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -103,7 +114,7 @@
         }
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -114,7 +125,7 @@
         }
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -127,6 +138,7 @@
     ],
     "parameters": {
       "Left": [
+        "Uuid",
         "Uuid"
       ]
     },
@@ -139,10 +151,11 @@
       true,
       false,
       false,
+      false,
       true,
       false,
       true
     ]
   },
-  "hash": "4f62229986b945fbd8d1d17b015fef4f68850d52138334a8c26944432ad0a7ad"
+  "hash": "0b876561c99bd53777e7c4e1a29d651365c603c08950e60657760567d6a208d1"
 }

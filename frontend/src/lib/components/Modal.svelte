@@ -7,6 +7,7 @@
 		title,
 		description,
 		nested = false,
+		theme,
 		children,
 		footer
 	}: {
@@ -14,6 +15,7 @@
 		title: string;
 		description?: string;
 		nested?: boolean;
+		theme?: string;
 		children?: Snippet;
 		footer?: Snippet;
 	} = $props();
@@ -26,12 +28,14 @@
 				'fixed inset-0 bg-base-300/70 backdrop-blur-[2px] data-[state=open]:opacity-100',
 				nested ? 'z-[60]' : 'z-50'
 			]}
+			data-theme={theme || undefined}
 		/>
 		<Dialog.Content
 			class={[
 				'fixed top-1/2 left-1/2 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-base-300 bg-base-100 p-6 shadow-xl',
 				nested ? 'z-[60]' : 'z-50'
 			]}
+			data-theme={theme || undefined}
 		>
 			<Dialog.Title class="font-serif text-xl font-semibold tracking-tight">{title}</Dialog.Title>
 			{#if description}

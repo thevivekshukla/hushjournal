@@ -1,7 +1,7 @@
 use errors::AppError;
+use journal::entries::ListOrder;
 use sqlx::PgPool;
 use user::GoogleAccount;
-use journal::entries::ListOrder;
 
 fn account() -> GoogleAccount {
     GoogleAccount {
@@ -19,13 +19,69 @@ async fn journal_crud_and_journal_limit(pool: PgPool) {
         .await
         .expect("user");
 
-    let created =
-        journal::journals::create(&pool, user.id, "Notes", b"salt", b"dek-bytes", Some("hint"))
-            .await
-            .expect("journal");
+    let created = journal::journals::create(
+        &pool,
+        user.id,
+        "Notes",
+        b"salt",
+        b"dek-bytes",
+        Some("hint"),
+        None,
+    )
+    .await
+    .expect("journal");
     assert_eq!(created.name, "Notes");
     assert_eq!(created.passphrase_hint.as_deref(), Some("hint"));
     assert!(!created.mask);
+    assert_eq!(created.theme, "");
+
+    let themed = journal::journals::update(
+        &pool,
+        user.id,
+        created.id,
+        None,
+        None,
+        None,
+        None,
+        None,
+        Some("forest"),
+    )
+    .await
+    .expect("theme");
+    assert_eq!(themed.theme, "forest");
+
+    let invalid = journal::journals::update(
+        &pool,
+        user.id,
+        created.id,
+        None,
+        None,
+        None,
+        None,
+        None,
+        Some("neon"),
+    )
+    .await
+    .expect_err("invalid theme");
+    match invalid {
+        AppError::BadRequest(message) => assert_eq!(message, "invalid theme"),
+        other => panic!("expected bad request, got {other:?}"),
+    }
+
+    let cleared = journal::journals::update(
+        &pool,
+        user.id,
+        created.id,
+        None,
+        None,
+        None,
+        None,
+        None,
+        Some(""),
+    )
+    .await
+    .expect("clear theme");
+    assert_eq!(cleared.theme, "");
 
     let notebook =
         journal::notebooks::create(&pool, user.id, created.id, b"notebook-name", Some("book"))
@@ -83,14 +139,22 @@ async fn journal_crud_and_journal_limit(pool: PgPool) {
             b"salt",
             b"dek-bytes",
             None,
+            None,
         )
         .await
         .expect("journal n");
     }
-    let err =
-        journal::journals::create(&pool, user.id, "too-many", b"salt", b"dek-bytes", None)
-            .await
-            .expect_err("limit");
+    let err = journal::journals::create(
+        &pool,
+        user.id,
+        "too-many",
+        b"salt",
+        b"dek-bytes",
+        None,
+        None,
+    )
+    .await
+    .expect_err("limit");
     match err {
         AppError::BadRequest(message) => {
             assert!(message.contains("more than 20 journals"));

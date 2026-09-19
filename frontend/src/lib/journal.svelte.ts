@@ -12,6 +12,7 @@ import {
 } from '$lib/crypto';
 import { ApiError } from '$lib/http';
 import { session } from '$lib/session.svelte';
+import { journalTheme, type JournalTheme } from '$lib/theme';
 
 export type Journal = {
 	id: string;
@@ -20,6 +21,7 @@ export type Journal = {
 	encryptedDek: string;
 	passphraseHint: string | null;
 	mask: boolean;
+	theme: JournalTheme;
 	totalSize: number;
 	sizeLastCalculatedAt: string | null;
 };
@@ -104,6 +106,7 @@ function mapJournal(row: api.ApiJournal): Journal {
 		encryptedDek: row.encrypted_dek,
 		passphraseHint: row.passphrase_hint,
 		mask: row.mask ?? false,
+		theme: journalTheme(row.theme),
 		totalSize: row.total_journal_size ?? 0,
 		sizeLastCalculatedAt: row.size_last_calculated_at
 	};
@@ -236,7 +239,12 @@ class JournalStore {
 		}
 	}
 
-	async createJournal(name: string, passphrase: string, passphraseHint = '') {
+	async createJournal(
+		name: string,
+		passphrase: string,
+		passphraseHint = '',
+		theme: JournalTheme = ''
+	) {
 		const secrets = await createJournalSecrets(passphrase);
 		const hint = passphraseHint.trim();
 		try {
@@ -245,7 +253,8 @@ class JournalStore {
 					name,
 					key_salt: bytesToBase64(secrets.keySalt),
 					encrypted_dek: bytesToBase64(secrets.encryptedDek),
-					...(hint ? { passphrase_hint: hint } : {})
+					...(hint ? { passphrase_hint: hint } : {}),
+					...(theme ? { theme } : {})
 				})
 			);
 			this.journals = [journal, ...this.journals];
@@ -275,6 +284,7 @@ class JournalStore {
 			name?: string;
 			passphraseHint?: string;
 			mask?: boolean;
+			theme?: JournalTheme;
 			keySalt?: string;
 			encryptedDek?: string;
 		}
@@ -283,12 +293,14 @@ class JournalStore {
 			name?: string;
 			passphrase_hint?: string;
 			mask?: boolean;
+			theme?: string;
 			key_salt?: string;
 			encrypted_dek?: string;
 		} = {};
 		if (patch.name !== undefined) body.name = patch.name;
 		if (patch.passphraseHint !== undefined) body.passphrase_hint = patch.passphraseHint;
 		if (patch.mask !== undefined) body.mask = patch.mask;
+		if (patch.theme !== undefined) body.theme = patch.theme;
 		if (patch.keySalt !== undefined) body.key_salt = patch.keySalt;
 		if (patch.encryptedDek !== undefined) body.encrypted_dek = patch.encryptedDek;
 		const journal = mapJournal(await api.updateJournal(id, body));

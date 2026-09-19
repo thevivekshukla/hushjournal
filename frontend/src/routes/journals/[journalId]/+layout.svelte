@@ -16,6 +16,7 @@
 		type Notebook
 	} from '$lib/journal.svelte';
 	import { session } from '$lib/session.svelte';
+	import { restoreAppTheme, type JournalTheme } from '$lib/theme';
 	import { untrack } from 'svelte';
 	import type { Attachment } from 'svelte/attachments';
 
@@ -33,6 +34,7 @@
 	let editName = $state('');
 	let editHint = $state('');
 	let editMask = $state(false);
+	let editTheme = $state<JournalTheme>('');
 	let busy = $state(false);
 	let passphrase = $state('');
 	let unlockError = $state('');
@@ -51,6 +53,7 @@
 	);
 	const entries = $derived(selectedNotebook ? journal.entriesFor(selectedNotebook.id) : []);
 	const maskOn = $derived(activeJournal?.mask === true);
+	const journalThemeId = $derived(activeJournal?.theme || undefined);
 	const unlocked = $derived(
 		Boolean(session.user && activeJournal && session.unlockedJournalId === journalId)
 	);
@@ -245,6 +248,7 @@
 		editName = activeJournal.name;
 		editHint = activeJournal.passphraseHint ?? '';
 		editMask = activeJournal.mask;
+		editTheme = activeJournal.theme;
 		journalEditOpen = true;
 	}
 
@@ -275,6 +279,14 @@
 	function onPageHide() {
 		void journal.flush();
 	}
+
+	$effect(() => {
+		const theme = journalThemeId;
+		if (typeof document === 'undefined') return;
+		if (theme) document.documentElement.setAttribute('data-theme', theme);
+		else restoreAppTheme();
+		return () => restoreAppTheme();
+	});
 </script>
 
 <svelte:window onkeydown={onKeydown} onpagehide={onPageHide} />
@@ -286,7 +298,10 @@
 <NoIndex />
 
 {#if session.user && !unlocked}
-	<div class="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 py-6">
+	<div
+		class="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-base-100 px-5 py-6 text-base-content"
+		data-theme={journalThemeId}
+	>
 		<header class="flex items-center justify-between gap-3">
 			<button
 				type="button"
@@ -297,7 +312,9 @@
 				<span>Journals</span>
 			</button>
 			<div class="flex items-center gap-1">
-				<ThemeToggle />
+				{#if !journalThemeId}
+					<ThemeToggle />
+				{/if}
 				<UserMenu compact />
 			</div>
 		</header>
@@ -345,7 +362,10 @@
 		</div>
 	</div>
 {:else if unlocked && activeJournal}
-	<div class="flex h-dvh min-h-0 flex-col">
+	<div
+		class="flex h-dvh min-h-0 flex-col bg-base-100 text-base-content"
+		data-theme={journalThemeId}
+	>
 		<header class="flex h-14 shrink-0 items-center gap-2 border-b border-base-300 px-3">
 			{#if entryId && notebookId}
 				<a
@@ -370,7 +390,9 @@
 				<span class="icon-[lucide--pencil] size-4"></span>
 			</button>
 			<div class="ml-auto flex items-center gap-1">
-				<ThemeToggle />
+				{#if !journalThemeId}
+					<ThemeToggle />
+				{/if}
 				<UserMenu compact />
 			</div>
 		</header>
@@ -567,6 +589,7 @@
 	bind:open={notebookOpen}
 	title="New notebook"
 	description="Notebook names are encrypted before they are stored."
+	theme={journalThemeId}
 >
 	<label class="w-full" for="new-notebook-name">
 		<span class="mb-1 block text-sm">Name</span>
@@ -613,6 +636,7 @@
 	bind:open={editNotebookOpen}
 	title="Edit notebook"
 	description="Notebook names are encrypted before they are stored."
+	theme={journalThemeId}
 >
 	<form
 		id="edit-notebook-form"
@@ -679,6 +703,7 @@
 	bind:open={deleteNotebookOpen}
 	title="Delete this notebook?"
 	description="This deletes the notebook and every note in it from the server. Ciphertext only — the server never saw the words."
+	theme={journalThemeId}
 >
 	{#snippet footer()}
 		<button type="button" class="btn btn-ghost" onclick={() => (deleteNotebookOpen = false)}>
@@ -701,4 +726,5 @@
 	bind:name={editName}
 	bind:hint={editHint}
 	bind:mask={editMask}
+	bind:theme={editTheme}
 />

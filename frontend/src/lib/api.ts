@@ -40,6 +40,7 @@ export type ApiJournal = {
 	encrypted_dek: string;
 	passphrase_hint: string | null;
 	mask: boolean;
+	theme: string;
 	total_journal_size: number;
 	size_last_calculated_at: string | null;
 	created_at: string;
@@ -97,6 +98,7 @@ export const createJournal = (body: {
 	key_salt: string;
 	encrypted_dek: string;
 	passphrase_hint?: string;
+	theme?: string;
 }) =>
 	apiFetch<ApiJournal>(journalCollection(), {
 		method: 'POST',
@@ -108,6 +110,7 @@ export const updateJournal = (
 		name?: string;
 		passphrase_hint?: string;
 		mask?: boolean;
+		theme?: string;
 		key_salt?: string;
 		encrypted_dek?: string;
 	}

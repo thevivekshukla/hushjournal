@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO journals (user_id, name, key_salt, encrypted_dek, passphrase_hint)\n            VALUES ($1, $2, $3, $4, $5)\n            RETURNING id, user_id, name, key_salt, encrypted_dek, passphrase_hint, mask,\n                total_journal_size, size_last_calculated_at, created_at, updated_at\n        ",
+  "query": "\n            SELECT id, user_id, name, key_salt, encrypted_dek, passphrase_hint, mask, theme,\n                total_journal_size, size_last_calculated_at, created_at, updated_at\n            FROM journals\n            WHERE user_id = $1\n            ORDER BY created_at DESC, id DESC\n        ",
   "describe": {
     "columns": [
       {
@@ -82,6 +82,17 @@
       },
       {
         "ordinal": 7,
+        "name": "theme",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "journals",
+            "name": "theme"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
         "name": "total_journal_size",
         "type_info": "Int8",
         "origin": {
@@ -92,7 +103,7 @@
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "size_last_calculated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -103,7 +114,7 @@
         }
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -114,7 +125,7 @@
         }
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -127,11 +138,7 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Text",
-        "Bytea",
-        "Bytea",
-        "Text"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -143,10 +150,11 @@
       true,
       false,
       false,
+      false,
       true,
       false,
       true
     ]
   },
-  "hash": "535ebcc653e0f2318d90fec6690a121f7f54c973e5e2735bce7d44ab8947fc67"
+  "hash": "075f6a03d1baa8eff572ba8225fffb7033741e0fe7c3a24ea20852bc11bb5493"
 }

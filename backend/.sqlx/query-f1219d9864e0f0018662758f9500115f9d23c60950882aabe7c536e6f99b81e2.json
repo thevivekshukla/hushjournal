@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            UPDATE journals\n            SET name = COALESCE($3, name),\n                key_salt = COALESCE($4, key_salt),\n                encrypted_dek = COALESCE($5, encrypted_dek),\n                passphrase_hint = CASE WHEN $6 THEN $7 ELSE passphrase_hint END,\n                mask = COALESCE($8, mask)\n            WHERE id = $1 AND user_id = $2\n            RETURNING id, user_id, name, key_salt, encrypted_dek, passphrase_hint, mask,\n                total_journal_size, size_last_calculated_at, created_at, updated_at\n        ",
+  "query": "\n            UPDATE journals\n            SET name = COALESCE($3, name),\n                key_salt = COALESCE($4, key_salt),\n                encrypted_dek = COALESCE($5, encrypted_dek),\n                passphrase_hint = CASE WHEN $6 THEN $7 ELSE passphrase_hint END,\n                mask = COALESCE($8, mask),\n                theme = COALESCE($9, theme)\n            WHERE id = $1 AND user_id = $2\n            RETURNING id, user_id, name, key_salt, encrypted_dek, passphrase_hint, mask, theme,\n                total_journal_size, size_last_calculated_at, created_at, updated_at\n        ",
   "describe": {
     "columns": [
       {
@@ -82,6 +82,17 @@
       },
       {
         "ordinal": 7,
+        "name": "theme",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "journals",
+            "name": "theme"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
         "name": "total_journal_size",
         "type_info": "Int8",
         "origin": {
@@ -92,7 +103,7 @@
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "size_last_calculated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -103,7 +114,7 @@
         }
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -114,7 +125,7 @@
         }
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -134,7 +145,8 @@
         "Bytea",
         "Bool",
         "Text",
-        "Bool"
+        "Bool",
+        "Text"
       ]
     },
     "nullable": [
@@ -146,10 +158,11 @@
       true,
       false,
       false,
+      false,
       true,
       false,
       true
     ]
   },
-  "hash": "acd343d4f565f365cb1d72044dd5bea4d30662b0efcaf666a5ef4ceb85703269"
+  "hash": "f1219d9864e0f0018662758f9500115f9d23c60950882aabe7c536e6f99b81e2"
 }

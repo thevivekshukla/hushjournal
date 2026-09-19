@@ -61,6 +61,7 @@
 	nested
 	title="Change passphrase"
 	description="The passphrase stays on this device. Notes keep the same encryption key."
+	theme={currentJournal?.theme || undefined}
 >
 	<label class="w-full" for="journal-change-current-passphrase">
 		<span class="mb-1 block text-sm">Current passphrase</span>
