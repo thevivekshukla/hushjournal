@@ -13,6 +13,8 @@
 	let showPassword = $state(false);
 	let busy = $state(false);
 	let error = $state('');
+	let showPasswordForm = $derived(!session.appConfig.disable_password_form);
+	let showSignupForm = $derived(showPasswordForm && !session.appConfig.disable_user_signup);
 
 	$effect(() => {
 		if (session.user) void goto(api.journals());
@@ -122,146 +124,154 @@
 				</svg>
 				Continue with Google
 			</a>
-			<div class="divider">or</div>
-			<div class="text-left">
-				<div class="tabs tabs-box grid w-full grid-cols-2" role="tablist">
-					<button
-						type="button"
-						role="tab"
-						class={['tab', 'w-full', tab === 'signin' && 'tab-active']}
-						aria-selected={tab === 'signin'}
-						onclick={() => selectTab('signin')}
-					>
-						Sign in
-					</button>
-					<button
-						type="button"
-						role="tab"
-						class={['tab', 'w-full', tab === 'signup' && 'tab-active']}
-						aria-selected={tab === 'signup'}
-						onclick={() => selectTab('signup')}
-					>
-						Sign up
-					</button>
+			{#if showPasswordForm}
+				<div class="divider">or</div>
+				<div class="text-left">
+					{#if showSignupForm}
+						<div class="tabs tabs-box grid w-full grid-cols-2" role="tablist">
+							<button
+								type="button"
+								role="tab"
+								class={['tab', 'w-full', tab === 'signin' && 'tab-active']}
+								aria-selected={tab === 'signin'}
+								onclick={() => selectTab('signin')}
+							>
+								Sign in
+							</button>
+							<button
+								type="button"
+								role="tab"
+								class={['tab', 'w-full', tab === 'signup' && 'tab-active']}
+								aria-selected={tab === 'signup'}
+								onclick={() => selectTab('signup')}
+							>
+								Sign up
+							</button>
+						</div>
+					{/if}
+					{#if tab === 'signin' || !showSignupForm}
+						<form class="mt-4 flex flex-col gap-3" onsubmit={(event) => void signIn(event)}>
+							<label class="w-full" for="username">
+								<span class="mb-1 block text-sm">Username</span>
+								<input
+									id="username"
+									name="username"
+									class="input w-full"
+									type="text"
+									autocomplete="username"
+									required
+									minlength={3}
+									maxlength={32}
+									autocapitalize="none"
+									spellcheck={false}
+									enterkeyhint="next"
+									bind:value={username}
+								/>
+							</label>
+							<div class="w-full">
+								<div class="mb-1 flex items-center justify-between">
+									<label class="text-sm" for="current-password">Password</label>
+									<button
+										type="button"
+										class="text-xs text-base-content/50"
+										onclick={() => (showPassword = !showPassword)}
+									>
+										{showPassword ? 'Hide' : 'Show'}
+									</button>
+								</div>
+								<input
+									id="current-password"
+									name="password"
+									class="input w-full"
+									type={showPassword ? 'text' : 'password'}
+									autocomplete="current-password"
+									required
+									minlength={8}
+									maxlength={128}
+									enterkeyhint="done"
+									bind:value={password}
+								/>
+							</div>
+							{#if error}
+								<p class="text-sm text-error">{error}</p>
+							{/if}
+							<button type="submit" class="btn w-full btn-neutral" disabled={busy}>Sign in</button>
+						</form>
+					{:else}
+						<form class="mt-4 flex flex-col gap-3" onsubmit={(event) => void signUp(event)}>
+							<label class="w-full" for="username-signup">
+								<span class="mb-1 block text-sm">Username</span>
+								<input
+									id="username-signup"
+									name="username"
+									class="input w-full"
+									type="text"
+									autocomplete="username"
+									required
+									minlength={3}
+									maxlength={32}
+									autocapitalize="none"
+									spellcheck={false}
+									enterkeyhint="next"
+									bind:value={username}
+								/>
+							</label>
+							<div class="w-full">
+								<div class="mb-1 flex items-center justify-between">
+									<label class="text-sm" for="new-password">Password</label>
+									<button
+										type="button"
+										class="text-xs text-base-content/50"
+										onclick={() => (showPassword = !showPassword)}
+									>
+										{showPassword ? 'Hide' : 'Show'}
+									</button>
+								</div>
+								<input
+									id="new-password"
+									name="new-password"
+									class="input w-full"
+									type={showPassword ? 'text' : 'password'}
+									autocomplete="new-password"
+									required
+									minlength={8}
+									maxlength={128}
+									enterkeyhint="next"
+									aria-describedby={password ? 'signup-password-strength' : undefined}
+									bind:value={password}
+								/>
+								<PassphraseStrength id="signup-password-strength" value={password} />
+							</div>
+							<label class="w-full" for="new-password-confirm">
+								<span class="mb-1 block text-sm">Confirm password</span>
+								<input
+									id="new-password-confirm"
+									name="new-password-confirm"
+									class="input w-full"
+									type={showPassword ? 'text' : 'password'}
+									autocomplete="new-password"
+									required
+									minlength={8}
+									maxlength={128}
+									enterkeyhint="done"
+									bind:value={confirmPassword}
+								/>
+							</label>
+							{#if error}
+								<p class="text-sm text-error">{error}</p>
+							{/if}
+							<button type="submit" class="btn w-full btn-neutral" disabled={busy}>Sign up</button>
+						</form>
+					{/if}
 				</div>
-				{#if tab === 'signin'}
-					<form class="mt-4 flex flex-col gap-3" onsubmit={(event) => void signIn(event)}>
-						<label class="w-full" for="username">
-							<span class="mb-1 block text-sm">Username</span>
-							<input
-								id="username"
-								name="username"
-								class="input w-full"
-								type="text"
-								autocomplete="username"
-								required
-								minlength={3}
-								maxlength={32}
-								autocapitalize="none"
-								spellcheck={false}
-								enterkeyhint="next"
-								bind:value={username}
-							/>
-						</label>
-						<div class="w-full">
-							<div class="mb-1 flex items-center justify-between">
-								<label class="text-sm" for="current-password">Password</label>
-								<button
-									type="button"
-									class="text-xs text-base-content/50"
-									onclick={() => (showPassword = !showPassword)}
-								>
-									{showPassword ? 'Hide' : 'Show'}
-								</button>
-							</div>
-							<input
-								id="current-password"
-								name="password"
-								class="input w-full"
-								type={showPassword ? 'text' : 'password'}
-								autocomplete="current-password"
-								required
-								minlength={8}
-								maxlength={128}
-								enterkeyhint="done"
-								bind:value={password}
-							/>
-						</div>
-						{#if error}
-							<p class="text-sm text-error">{error}</p>
-						{/if}
-						<button type="submit" class="btn w-full btn-neutral" disabled={busy}>Sign in</button>
-					</form>
-				{:else}
-					<form class="mt-4 flex flex-col gap-3" onsubmit={(event) => void signUp(event)}>
-						<label class="w-full" for="username-signup">
-							<span class="mb-1 block text-sm">Username</span>
-							<input
-								id="username-signup"
-								name="username"
-								class="input w-full"
-								type="text"
-								autocomplete="username"
-								required
-								minlength={3}
-								maxlength={32}
-								autocapitalize="none"
-								spellcheck={false}
-								enterkeyhint="next"
-								bind:value={username}
-							/>
-						</label>
-						<div class="w-full">
-							<div class="mb-1 flex items-center justify-between">
-								<label class="text-sm" for="new-password">Password</label>
-								<button
-									type="button"
-									class="text-xs text-base-content/50"
-									onclick={() => (showPassword = !showPassword)}
-								>
-									{showPassword ? 'Hide' : 'Show'}
-								</button>
-							</div>
-							<input
-								id="new-password"
-								name="new-password"
-								class="input w-full"
-								type={showPassword ? 'text' : 'password'}
-								autocomplete="new-password"
-								required
-								minlength={8}
-								maxlength={128}
-								enterkeyhint="next"
-								aria-describedby={password ? 'signup-password-strength' : undefined}
-								bind:value={password}
-							/>
-							<PassphraseStrength id="signup-password-strength" value={password} />
-						</div>
-						<label class="w-full" for="new-password-confirm">
-							<span class="mb-1 block text-sm">Confirm password</span>
-							<input
-								id="new-password-confirm"
-								name="new-password-confirm"
-								class="input w-full"
-								type={showPassword ? 'text' : 'password'}
-								autocomplete="new-password"
-								required
-								minlength={8}
-								maxlength={128}
-								enterkeyhint="done"
-								bind:value={confirmPassword}
-							/>
-						</label>
-						{#if error}
-							<p class="text-sm text-error">{error}</p>
-						{/if}
-						<button type="submit" class="btn w-full btn-neutral" disabled={busy}>Sign up</button>
-					</form>
-				{/if}
-			</div>
+			{/if}
 			<p class="mt-4 text-xs text-base-content/50">
-				Sign in with Google or a username and password. Your journal passphrase never leaves this
-				device.
+				{#if showPasswordForm}
+					Sign in with Google or a username and password. Your journal passphrase never leaves this
+					device.
+				{:else}
+					Sign in with Google. Your journal passphrase never leaves this device.
+				{/if}
 			</p>
 		</div>
 	</main>

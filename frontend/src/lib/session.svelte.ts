@@ -20,6 +20,10 @@ function mapUser(user: api.ApiUser): User {
 
 class Session {
 	user = $state.raw<User | null>(null);
+	appConfig = $state.raw<api.ApiAppConfig>({
+		disable_user_signup: false,
+		disable_password_form: false
+	});
 	ready = $state(false);
 	loadError = $state<string | null>(null);
 	unlockedJournalId = $state<string | null>(null);
@@ -36,16 +40,24 @@ class Session {
 	async hydrate() {
 		if (this.ready) return;
 		this.loadError = null;
-		try {
-			this.user = mapUser(await api.getUser());
-		} catch (error) {
+		const [userResult, configResult] = await Promise.allSettled([
+			api.getUser(),
+			api.getAppConfig()
+		]);
+		if (userResult.status === 'fulfilled') {
+			this.user = mapUser(userResult.value);
+		} else {
 			this.user = null;
+			const error = userResult.reason;
 			if (!(error instanceof ApiError && error.status === 401)) {
 				this.loadError = error instanceof Error ? error.message : 'Could not reach the server.';
 			}
-		} finally {
-			this.ready = true;
 		}
+		this.appConfig =
+			configResult.status === 'fulfilled'
+				? configResult.value
+				: { disable_user_signup: false, disable_password_form: false };
+		this.ready = true;
 	}
 
 	setUser(user: api.ApiUser) {

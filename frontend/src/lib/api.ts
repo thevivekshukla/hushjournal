@@ -9,6 +9,7 @@ export const journalEntry = (journalId: string, notebookId: string, entryId: str
 	`/journals/${journalId}/notebook/${notebookId}/entry/${entryId}`;
 
 export const health = () => '/health';
+export const appConfig = () => '/api/app-config';
 export const google = (next?: string) =>
 	next ? `/api/auth/google?next=${encodeURIComponent(next)}` : '/api/auth/google';
 export const googleCallback = () => '/api/auth/google/callback';
@@ -22,6 +23,11 @@ export const journalNotebooks = (journalId: string) => `/api/journals/${journalI
 export const notebook = (id: string) => `/api/notebooks/${id}`;
 export const notebookEntries = (notebookId: string) => `/api/notebooks/${notebookId}/entries`;
 export const entry = (id: string) => `/api/entries/${id}`;
+
+export type ApiAppConfig = {
+	disable_user_signup: boolean;
+	disable_password_form: boolean;
+};
 
 export type ApiUser = {
 	id: string;
@@ -78,6 +84,7 @@ export type ApiEntryPage = {
 	next_cursor: string | null;
 };
 
+export const getAppConfig = () => apiFetch<ApiAppConfig>(appConfig());
 export const getUser = () => apiFetch<ApiUser>(user());
 export const logoutUser = () => apiFetch<void>(logout(), { method: 'POST' });
 export const loginWithPassword = (body: { username: string; password: string }) =>

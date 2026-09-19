@@ -141,7 +141,7 @@ async fn get_by_id_unchecked(pool: &PgPool, id: Uuid) -> Result<Option<User>, Ap
     .map_err(map_db)
 }
 
-async fn get_by_google_account_id(
+pub async fn get_by_google_account_id(
     pool: &PgPool,
     google_account_id: &str,
 ) -> Result<Option<User>, AppError> {

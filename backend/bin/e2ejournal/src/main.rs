@@ -94,6 +94,8 @@ async fn serve() -> anyhow::Result<()> {
     let state = AppState::connect(
         &config.database_url,
         config.cookie_secure,
+        config.disable_user_signup,
+        config.disable_password_form,
         config.app_origin.clone(),
         config.google_oauth.clone(),
     )
@@ -212,6 +214,8 @@ mod tests {
             )
         );
         assert!(first.contains("GOOGLE_LOGIN_OAUTH2="));
+        assert!(first.contains("DISABLE_USER_SIGNUP=false"));
+        assert!(first.contains("DISABLE_PASSWORD_FORM=false"));
 
         std::fs::write(&env_path, "keep=me\n").expect("marker");
         write_sample_env_to(&dir).expect("skip");

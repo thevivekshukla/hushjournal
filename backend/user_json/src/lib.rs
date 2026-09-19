@@ -9,18 +9,25 @@ use axum_extra::extract::CookieJar;
 use db::AppState;
 use errors::AppError;
 use rand::RngCore;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use user::User;
 use utils::{Session, UserId};
 
 pub fn router() -> Router<AppState> {
     Router::new()
+        .route("/app-config", get(app_config))
         .route("/auth/google", get(google_login))
         .route("/auth/google/callback", get(google_callback))
         .route("/auth/login", post(password_login))
         .route("/auth/signup", post(password_signup))
         .route("/auth/logout", post(logout))
         .route("/user", get(me).patch(update_me).delete(delete_me))
+}
+
+#[derive(Serialize)]
+struct AppConfigResponse {
+    disable_user_signup: bool,
+    disable_password_form: bool,
 }
 
 #[derive(Deserialize)]
@@ -103,6 +110,13 @@ async fn google_callback(
     session.remove(&state.db, "oauth_next").await?;
 
     let account = google::exchange_code(&state, &code).await?;
+    if state.disable_user_signup
+        && user::get_by_google_account_id(&state.db, &account.google_account_id)
+            .await?
+            .is_none()
+    {
+        return Err(AppError::BadRequest("signup is disabled".into()));
+    }
     let user = user::login_with_google(&state.db, &account).await?;
     session.attach(&state.db, "user_id", &user.id).await?;
     tracing::info!(user_id = %user.id, "user logged in with google");
@@ -111,12 +125,20 @@ async fn google_callback(
     Ok((jar, Redirect::to(&app_redirect(&state.app_origin, &next))).into_response())
 }
 
+async fn app_config(State(state): State<AppState>) -> Json<AppConfigResponse> {
+    Json(AppConfigResponse {
+        disable_user_signup: state.disable_user_signup,
+        disable_password_form: state.disable_password_form,
+    })
+}
+
 async fn password_login(
     State(state): State<AppState>,
     jar: CookieJar,
     mut session: Session,
     Json(body): Json<PasswordAuth>,
 ) -> Result<impl IntoResponse, AppError> {
+    reject_if_password_form_disabled(&state)?;
     let user = user::login_with_password(&state.db, &body.username, &body.password).await?;
     session.attach(&state.db, "user_id", &user.id).await?;
     tracing::info!(user_id = %user.id, "user logged in with password");
@@ -132,6 +154,8 @@ async fn password_signup(
     mut session: Session,
     Json(body): Json<PasswordAuth>,
 ) -> Result<impl IntoResponse, AppError> {
+    reject_if_password_form_disabled(&state)?;
+    reject_if_signup_disabled(&state)?;
     let user = match user::signup_with_password(&state.db, &body.username, &body.password).await {
         Ok(user) => user,
         Err(AppError::Conflict) => {
@@ -192,6 +216,22 @@ async fn delete_me(
 
 fn with_session_cookie(jar: CookieJar, session: &Session, secure: bool) -> CookieJar {
     jar.add(session.cookie(secure))
+}
+
+fn reject_if_password_form_disabled(state: &AppState) -> Result<(), AppError> {
+    if state.disable_password_form {
+        Err(AppError::BadRequest("password form is disabled".into()))
+    } else {
+        Ok(())
+    }
+}
+
+fn reject_if_signup_disabled(state: &AppState) -> Result<(), AppError> {
+    if state.disable_user_signup {
+        Err(AppError::BadRequest("signup is disabled".into()))
+    } else {
+        Ok(())
+    }
 }
 
 fn random_token() -> String {

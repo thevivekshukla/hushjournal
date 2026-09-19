@@ -7,6 +7,8 @@ pub struct Config {
     pub host: String,
     pub port: u16,
     pub cookie_secure: bool,
+    pub disable_user_signup: bool,
+    pub disable_password_form: bool,
     pub app_origin: Option<String>,
     pub google_oauth: GoogleOAuth,
 }
@@ -21,6 +23,8 @@ impl Config {
             .parse()
             .context("PORT must be a valid u16")?;
         let cookie_secure = env_bool("COOKIE_SECURE", false);
+        let disable_user_signup = env_bool("DISABLE_USER_SIGNUP", false);
+        let disable_password_form = env_bool("DISABLE_PASSWORD_FORM", false);
         let (google_client_id, google_client_secret) = parse_google_login_oauth2(
             &std::env::var("GOOGLE_LOGIN_OAUTH2")
                 .context("GOOGLE_LOGIN_OAUTH2 must be set (client_id,client_secret)")?,
@@ -37,6 +41,8 @@ impl Config {
             host,
             port,
             cookie_secure,
+            disable_user_signup,
+            disable_password_form,
             app_origin,
             google_oauth: GoogleOAuth {
                 client_id: google_client_id,
