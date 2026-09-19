@@ -6,12 +6,38 @@ CREATE TABLE journals (
     encrypted_dek BYTEA NOT NULL,
     passphrase_hint TEXT,
     mask BOOLEAN NOT NULL DEFAULT false,
+    theme TEXT NOT NULL DEFAULT '',
     total_journal_size BIGINT NOT NULL DEFAULT 0,
     size_last_calculated_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ,
     CONSTRAINT journals_passphrase_hint_len CHECK (
         passphrase_hint IS NULL OR char_length(passphrase_hint) <= 255
+    ),
+    CONSTRAINT journals_theme_values CHECK (
+        theme IN (
+            '',
+            'silk',
+            'cupcake',
+            'bumblebee',
+            'emerald',
+            'corporate',
+            'nord',
+            'lemonade',
+            'winter',
+            'caramellatte',
+            'retro',
+            'dim',
+            'forest',
+            'dracula',
+            'night',
+            'coffee',
+            'synthwave',
+            'abyss',
+            'luxury',
+            'halloween',
+            'sunset'
+        )
     )
 );
 
