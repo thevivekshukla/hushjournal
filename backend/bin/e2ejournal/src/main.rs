@@ -216,6 +216,7 @@ mod tests {
         );
         assert!(first.contains("GOOGLE_LOGIN_OAUTH2="));
         assert!(first.contains("APP_ORIGIN="));
+        assert!(!first.contains("COOKIE_SECURE"));
         assert!(!first.contains("GOOGLE_OAUTH_REDIRECT_URI"));
         assert!(first.contains("DISABLE_USER_SIGNUP=false"));
         assert!(first.contains("DISABLE_PASSWORD_FORM=false"));

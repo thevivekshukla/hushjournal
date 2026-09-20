@@ -22,12 +22,12 @@ impl Config {
             .unwrap_or_else(|_| "8000".into())
             .parse()
             .context("PORT must be a valid u16")?;
-        let cookie_secure = env_bool("COOKIE_SECURE", false);
         let disable_user_signup = env_bool("DISABLE_USER_SIGNUP", false);
         let disable_password_form = env_bool("DISABLE_PASSWORD_FORM", false);
         let app_origin = parse_app_origin(
             &std::env::var("APP_ORIGIN").context("APP_ORIGIN must be set (see .env.example)")?,
         )?;
+        let cookie_secure = app_origin.starts_with("https://");
         let google_oauth = optional_google_oauth(&app_origin)?;
 
         Ok(Self {
