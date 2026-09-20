@@ -21,7 +21,7 @@ mod spa;
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[derive(Parser)]
-#[command(name = "e2ejournal", about = "End-to-end encrypted journal API")]
+#[command(name = "hushjournal", about = "End-to-end encrypted journal API")]
 struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
@@ -201,7 +201,7 @@ mod tests {
     #[test]
     fn writes_sample_env_then_leaves_existing_file() {
         let dir = std::env::temp_dir().join(format!(
-            "e2ejournal-env-{}-{}",
+            "hushjournal-env-{}-{}",
             std::process::id(),
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -215,7 +215,7 @@ mod tests {
         let first = std::fs::read_to_string(&env_path).expect("read");
         assert!(
             first.contains(
-                "DATABASE_URL=postgres://e2ejournal:e2ejournal@localhost:58417/e2ejournal"
+                "DATABASE_URL=postgres://hushjournal:hushjournal@localhost:58417/hushjournal"
             )
         );
         assert!(first.contains("GOOGLE_LOGIN_OAUTH2="));

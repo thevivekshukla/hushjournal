@@ -80,12 +80,12 @@
 </script>
 
 <svelte:head>
-	<title>Sign in · e2ejournal</title>
+	<title>Sign in · HushJournal</title>
 </svelte:head>
 
 <div class="relative flex min-h-dvh flex-col">
 	<header class="flex items-center justify-between px-5 py-4">
-		<p class="font-serif text-lg tracking-tight">e2ejournal</p>
+		<p class="font-serif text-lg tracking-tight">HushJournal</p>
 		<ThemeToggle />
 	</header>
 

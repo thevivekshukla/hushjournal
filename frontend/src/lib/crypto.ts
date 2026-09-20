@@ -21,7 +21,8 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 function aad(purpose: Purpose): Uint8Array {
-	return encoder.encode(`e2ejournal:v1:${purpose}`);
+	// Stable AEAD domain; do not change or existing ciphertext will not decrypt.
+	return encoder.encode(`hushjournal:v1:${purpose}`);
 }
 
 async function deriveKek(passphrase: string, salt: Uint8Array) {

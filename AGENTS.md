@@ -1,4 +1,4 @@
-# e2ejournal
+# HushJournal
 
 End-to-end encrypted journal. The client encrypts with AES-256-GCM-SIV. The server stores ciphertext only and must never see, log, or decrypt user content.
 
@@ -12,7 +12,7 @@ Rust workspace under `backend/`. Edition 2024. Stack: Axum, SQLx, Postgres.
 
 ```
 backend/
-  bin/e2ejournal/   # API binary; mount crate routers from src/main.rs
+  bin/hushjournal/  # API binary; mount crate routers from src/main.rs
   errors/           # AppError and HTTP error mapping
   db/               # pool, AppState, SQLx migrations
   utils/            # config, Axum session extractors, shared reqwest client, generate_uuid
@@ -22,19 +22,19 @@ backend/
   journal_json/     # Axum JSON handlers / router for journals, notebooks, and entries
 ```
 
-- `cargo run` from `backend/` should start the API (`default-members` is `bin/e2ejournal`).
+- `cargo run` from `backend/` should start the API (`default-members` is `bin/hushjournal`).
 - Shared outbound HTTP uses `utils::reqwest_client()` (a process-wide `reqwest::Client`). Do not create additional reqwest clients.
-- Domain DB access lives in entity crates (`user`, `journal`). `journal` covers journals, notebooks, and entries together. REST handlers for those entities live in `*_json` crates and are `.nest("/api", ...)` from `bin/e2ejournal/src/main.rs`. `*_json` routers must not include the `/api` prefix themselves. Keep `/health`, `GET /`, and server wiring in `main.rs` (health stays outside `/api`).
+- Domain DB access lives in entity crates (`user`, `journal`). `journal` covers journals, notebooks, and entries together. REST handlers for those entities live in `*_json` crates and are `.nest("/api", ...)` from `bin/hushjournal/src/main.rs`. `*_json` routers must not include the `/api` prefix themselves. Keep `/health`, `GET /`, and server wiring in `main.rs` (health stays outside `/api`).
 - Journal REST: `/journals`, `/journals/{id}/notebooks`, `/notebooks/{id}/entries` for collections; `/journals/{id}`, `/notebooks/{id}`, `/entries/{id}` for a single row. All require a session. BYTEA ciphertext is JSON standard-base64. `entries.entry_date` is plaintext ISO `YYYY-MM-DD` (editable; omitted create uses the database default). List entries omit `content` and return a cursor page `{ entries, next_cursor }` ordered by `id` (UUIDv7). Query params: `cursor` (entry id), `order=asc|desc` (default desc), `limit` (1–100, default 50). `GET /entries/{id}` returns the body. `PATCH /entries/{id}` returns 204 with no body. Do not log ciphertext.
 - Write SQLx queries in-place at the call site. Do not abstract SQL into shared consts, macros, or concatenated column lists. If a query is too long for a normal editor width, break it across multiple lines in a raw string (`r#"..."#`). Keep short queries on one line.
 - Always use the type-checked SQLx macros (`query!`, `query_as!`, `query_scalar!`). Do not use `sqlx::query()`, `query_as()`, or `query_scalar()`. After adding or changing queries, run `just prepare` from `backend/` against a migrated Postgres database and commit the `.sqlx` cache.
 - Default API bind: `127.0.0.1:8000` (`HOST` / `PORT`). Do not change the default port to 3000.
-- `APP_ORIGIN` is required: an http(s) origin with no path (e.g. `http://127.0.0.1:5173` for Vite, or the public origin in production). It prefixes post-login redirects and the Google OAuth callback `{APP_ORIGIN}/api/auth/google/callback`. Session cookies set `Secure` when it is https. It is not a CORS allowlist.
+- `APP_ORIGIN` is required: an http(s) origin with no path (e.g. `http://127.0.0.1:5173` for Vite, or `https://hushjournal.com` in production). It prefixes post-login redirects and the Google OAuth callback `{APP_ORIGIN}/api/auth/google/callback`. Session cookies set `Secure` when it is https. It is not a CORS allowlist.
 - `GOOGLE_LOGIN_OAUTH2` is optional: `client_id,client_secret` (comma-separated, first comma splits). When unset or empty, Google sign-in is off. Register `{APP_ORIGIN}/api/auth/google/callback` on the Google Cloud OAuth client (Vite local: `http://127.0.0.1:5173/api/auth/google/callback`).
 - `DISABLE_USER_SIGNUP` (default false): when true, new accounts cannot be created (password signup and first-time Google login). Existing users can still sign in. `DISABLE_PASSWORD_FORM` (default false): when true, username/password sign-in and signup are rejected. Both are `"true"` / `"1"` or omitted/false. Public `GET /api/app-config` returns `{ disable_user_signup, disable_password_form, disable_google_login }` so the SPA can hide those UI paths. `disable_google_login` is true when Google OAuth secrets are not set.
 - Google OAuth is the authorization-code flow. Start at `GET /api/auth/google` (optional `next` query, relative path only), callback at `GET /api/auth/google/callback`. After login, redirect to `APP_ORIGIN` plus `next` or `/journals`. Both Google routes return 400 `"google login is disabled"` when OAuth secrets are not set. Never log OAuth codes, tokens, or client secrets.
 - Do not add CORS. The SPA is same-origin: Vite proxies `/api` in development, and production embeds the Vite build in the API binary. `APP_ORIGIN` is the public origin for OAuth and post-login redirects, not a CORS allowlist. Cross-origin browsers must not be able to call the API.
-- Production static files live in `bin/e2ejournal/static` (gitignored build output). `just build` from `backend/` runs the frontend build, copies it there, then `cargo build --release`. The binary serves hashed assets from that tree and uses SvelteKit's `200.html` as the GET fallback for client routes. Keep `/health` and `/api` ahead of that fallback. `GET /` always 307s to `/login`.
+- Production static files live in `bin/hushjournal/static` (gitignored build output). `just build` from `backend/` runs the frontend build, copies it there, then `cargo build --release`. The binary serves hashed assets from that tree and uses SvelteKit's `200.html` as the GET fallback for client routes. Keep `/health` and `/api` ahead of that fallback. `GET /` always 307s to `/login`.
 
 ## Postgres
 
@@ -55,11 +55,11 @@ updated_at TIMESTAMPTZ
 - `entries.total_size` is `BIGINT NOT NULL DEFAULT 0` and is set by `set_entry_total_size` on INSERT/UPDATE to `octet_length(title) + octet_length(content)`. Do not set it in application code.
 - `entries.entry_date` is plaintext `DATE NOT NULL DEFAULT CURRENT_DATE`. The client may send it on create/PATCH; omit it to keep the default. Do not encrypt it.
 - `notebooks.total_notebook_size` is `BIGINT NOT NULL DEFAULT 0`. `notebooks.size_last_calculated_at` is `TIMESTAMPTZ` NULL. Both are maintained by application cron, not triggers. Recalculate a notebook when any of its entries has `created_at` or `updated_at` after `size_last_calculated_at` (treat NULL as never calculated).
-- `journals.total_journal_size` is `BIGINT NOT NULL DEFAULT 0`. `journals.size_last_calculated_at` is `TIMESTAMPTZ` NULL. Same cron, not triggers. Recalculate a journal when any of its notebooks has `created_at`, `updated_at`, or `size_last_calculated_at` after the journal's `size_last_calculated_at` (treat NULL as never calculated). Do not set either column in application CRUD. Spawn both jobs from `bin/e2ejournal` with `tokio::spawn` (notebooks first, then journals, every 60s).
+- `journals.total_journal_size` is `BIGINT NOT NULL DEFAULT 0`. `journals.size_last_calculated_at` is `TIMESTAMPTZ` NULL. Same cron, not triggers. Recalculate a journal when any of its notebooks has `created_at`, `updated_at`, or `size_last_calculated_at` after the journal's `size_last_calculated_at` (treat NULL as never calculated). Do not set either column in application CRUD. Spawn both jobs from `bin/hushjournal` with `tokio::spawn` (notebooks first, then journals, every 60s).
 - Migrations live in `backend/db/migrations/` and are applied on API startup via `sqlx::migrate!()`.
 - Sessions, cookies, and other short-lived scratch data go in the UNLOGGED `kv_store` table via `db::PgStore`. Do not add Redis. Do not store journal content, `key_salt`, or `encrypted_dek` there — UNLOGGED tables skip WAL and can be lost on crash.
-- Backup with `e2ejournal db-backup`. It runs `pg_dump -Fc` to `e2ejournal-{YYYYMMDDTHHMMSSZ}.dump` in the current directory. `--path FILE` writes to that file instead and refuses to overwrite.
-- `e2ejournal env` writes a sample `.env` in the current directory (same defaults as `backend/.env.example`). If `.env` already exists it prints a message and does not overwrite.
+- Backup with `hushjournal db-backup`. It runs `pg_dump -Fc` to `hushjournal-{YYYYMMDDTHHMMSSZ}.dump` in the current directory. `--path FILE` writes to that file instead and refuses to overwrite.
+- `hushjournal env` writes a sample `.env` in the current directory (same defaults as `backend/.env.example`). If `.env` already exists it prints a message and does not overwrite.
 
 ## Sessions
 

@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "bin/e2ejournal",
+    "bin/hushjournal",
     "db",
     "errors",
     "user",
@@ -9,7 +9,7 @@ members = [
     "journal",
     "journal_json",
 ]
-default-members = ["bin/e2ejournal"]
+default-members = ["bin/hushjournal"]
 resolver = "3"
 
 [workspace.package]

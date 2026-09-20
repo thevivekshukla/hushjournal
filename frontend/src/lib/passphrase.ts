@@ -19,7 +19,7 @@ const COMMON = new Set([
 	'qwertyuiop',
 	'letmein',
 	'journal',
-	'e2ejournal'
+	'hushjournal'
 ]);
 
 function charsetSize(value: string) {

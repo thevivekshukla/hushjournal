@@ -63,7 +63,7 @@ pub async fn connect_pool(database_url: &str) -> anyhow::Result<PgPool> {
 
 pub fn default_backup_path() -> std::path::PathBuf {
     let stamp = chrono::Utc::now().format("%Y%m%dT%H%M%SZ");
-    std::path::PathBuf::from(format!("e2ejournal-{stamp}.dump"))
+    std::path::PathBuf::from(format!("hushjournal-{stamp}.dump"))
 }
 
 pub async fn backup_to(

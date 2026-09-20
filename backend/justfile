@@ -1,5 +1,5 @@
 frontend := justfile_directory() / ".." / "frontend"
-spa_static := justfile_directory() / "bin" / "e2ejournal" / "static"
+spa_static := justfile_directory() / "bin" / "hushjournal" / "static"
 
 run:
     watchexec -r -e rs,toml,html cargo run
@@ -9,7 +9,7 @@ prepare:
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{justfile_directory()}}"
-    export DATABASE_URL="${DATABASE_URL:-postgres://e2ejournal:e2ejournal@localhost:58417/e2ejournal}"
+    export DATABASE_URL="${DATABASE_URL:-postgres://hushjournal:hushjournal@localhost:58417/hushjournal}"
     export SQLX_OFFLINE=false
     cargo sqlx database create
     cargo sqlx migrate run --source db/migrations
@@ -26,4 +26,4 @@ build:
     touch "{{spa_static}}/.gitkeep"
     test -f "{{spa_static}}/200.html"
     SQLX_OFFLINE=true cargo build --release
-    @echo "release binary: ${CARGO_TARGET_DIR:-{{justfile_directory()}}/target}/release/e2ejournal"
+    @echo "release binary: ${CARGO_TARGET_DIR:-{{justfile_directory()}}/target}/release/hushjournal"

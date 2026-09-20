@@ -4,16 +4,16 @@ services:
     environment:
       TZ: UTC
       PGTZ: UTC
-      POSTGRES_USER: e2ejournal
-      POSTGRES_PASSWORD: e2ejournal
-      POSTGRES_DB: e2ejournal
+      POSTGRES_USER: hushjournal
+      POSTGRES_PASSWORD: hushjournal
+      POSTGRES_DB: hushjournal
     command: ["postgres", "-c", "timezone=UTC"]
     ports:
       - "58417:5432"
     volumes:
       - postgres_data_18:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U e2ejournal -d e2ejournal"]
+      test: ["CMD-SHELL", "pg_isready -U hushjournal -d hushjournal"]
       interval: 5s
       timeout: 5s
       retries: 5

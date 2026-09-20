@@ -309,7 +309,7 @@
 <svelte:window onkeydown={onKeydown} onpagehide={onPageHide} />
 
 <svelte:head>
-	<title>{activeJournal?.name ?? 'Journal'} · e2ejournal</title>
+	<title>{activeJournal?.name ?? 'Journal'} · HushJournal</title>
 </svelte:head>
 
 <NoIndex />

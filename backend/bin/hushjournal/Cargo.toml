@@ -1,8 +1,8 @@
 [package]
-name = "e2ejournal"
+name = "hushjournal"
 version.workspace = true
 edition.workspace = true
-description = "REST API for e2ejournal (Axum + SQLx/Postgres)"
+description = "REST API for HushJournal (Axum + SQLx/Postgres)"
 
 [dependencies]
 anyhow.workspace = true

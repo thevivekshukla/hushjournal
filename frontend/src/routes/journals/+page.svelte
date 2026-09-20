@@ -115,7 +115,7 @@
 </script>
 
 <svelte:head>
-	<title>Journals · e2ejournal</title>
+	<title>Journals · HushJournal</title>
 </svelte:head>
 
 <NoIndex />
@@ -124,7 +124,7 @@
 	<div class="mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-5 py-6">
 		<header class="flex items-center justify-between gap-3">
 			<div>
-				<p class="font-serif text-lg tracking-tight">e2ejournal</p>
+				<p class="font-serif text-lg tracking-tight">HushJournal</p>
 				<p class="text-sm text-base-content/60">Choose a journal to unlock.</p>
 			</div>
 			<div class="flex items-center gap-1">

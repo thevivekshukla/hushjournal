@@ -13,7 +13,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>e2ejournal</title>
+	<title>HushJournal</title>
 </svelte:head>
 
 <div class="min-h-dvh bg-base-100 font-sans text-base-content">

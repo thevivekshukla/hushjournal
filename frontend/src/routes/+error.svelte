@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-	<title>Not found · e2ejournal</title>
+	<title>Not found · HushJournal</title>
 </svelte:head>
 
 <div class="flex min-h-dvh flex-col items-center justify-center px-6 text-center">

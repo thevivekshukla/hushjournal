@@ -1,4 +1,4 @@
-# e2ejournal frontend
+# HushJournal frontend
 
 SvelteKit SPA for the encrypted journal. Styled with Tailwind CSS 4 and DaisyUI, with bits-ui for dialogs and menus.
 
