@@ -25,17 +25,22 @@ textarea.journal-body {
 	box-shadow: none;
 }
 
-.input:focus,
-.input:focus-within {
+:is(.input, .select, .textarea, .file-input):is(:focus, :focus-within),
+:is(.toggle, .checkbox, .radio):is(:focus, :focus-visible) {
+	--tw-outline-style: none;
 	outline: none;
+	outline-offset: 0;
+}
+
+:is(.input, .select, .textarea, .file-input):is(:focus, :focus-within) {
 	box-shadow:
 		0 1px color-mix(in oklab, var(--input-color) calc(var(--depth) * 10%), #0000) inset,
 		0 -1px oklch(100% 0 0 / calc(var(--depth) * 0.1)) inset;
 }
 
 @media (forced-colors: active) {
-	.input:focus,
-	.input:focus-within {
+	:is(.input, .select, .textarea, .file-input):is(:focus, :focus-within),
+	:is(.toggle, .checkbox, .radio):is(:focus, :focus-visible) {
 		outline: 2px solid CanvasText;
 		outline-offset: 2px;
 	}
