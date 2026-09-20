@@ -14,7 +14,7 @@ fn account() -> GoogleAccount {
 }
 
 #[sqlx::test(migrations = "../db/migrations")]
-async fn journal_crud_and_journal_limit(pool: PgPool) {
+async fn journal_crud(pool: PgPool) {
     let user = user::login_with_google(&pool, &account())
         .await
         .expect("user");
@@ -130,35 +130,4 @@ async fn journal_crud_and_journal_limit(pool: PgPool) {
         .expect("get dated");
     assert_eq!(dated_entry.entry_date, dated);
     assert_eq!(dated_entry.title, b"new-title");
-
-    for i in 1..20 {
-        journal::journals::create(
-            &pool,
-            user.id,
-            &format!("ws-{i}"),
-            b"salt",
-            b"dek-bytes",
-            None,
-            None,
-        )
-        .await
-        .expect("journal n");
-    }
-    let err = journal::journals::create(
-        &pool,
-        user.id,
-        "too-many",
-        b"salt",
-        b"dek-bytes",
-        None,
-        None,
-    )
-    .await
-    .expect_err("limit");
-    match err {
-        AppError::BadRequest(message) => {
-            assert!(message.contains("more than 20 journals"));
-        }
-        other => panic!("expected bad request, got {other:?}"),
-    }
 }

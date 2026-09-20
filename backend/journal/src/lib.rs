@@ -70,11 +70,7 @@ pub(crate) fn map_db(err: sqlx::Error) -> AppError {
 }
 
 fn check_violation_message(message: &str) -> String {
-    if message.contains("journals_max") || message.contains("more than 20 journals") {
-        "a user cannot have more than 20 journals".into()
-    } else if message.contains("notebooks_max") || message.contains("more than 100 notebooks") {
-        "a journal cannot have more than 100 notebooks".into()
-    } else if message.contains("journals_passphrase_hint") {
+    if message.contains("journals_passphrase_hint") {
         "passphrase hint is too long".into()
     } else if message.contains("journals_theme") {
         "invalid theme".into()

@@ -43,27 +43,4 @@ CREATE TABLE IF NOT EXISTS journals (
 
 CREATE INDEX IF NOT EXISTS journals_user_id_idx ON journals (user_id);
 
-CREATE OR REPLACE FUNCTION check_journals_max_per_user()
-RETURNS trigger
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    IF (
-        SELECT count(*) FROM journals
-        WHERE user_id = NEW.user_id
-          AND id IS DISTINCT FROM NEW.id
-    ) >= 20 THEN
-        RAISE EXCEPTION 'a user cannot have more than 20 journals'
-            USING ERRCODE = 'check_violation';
-    END IF;
-    RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS journals_max_per_user ON journals;
-CREATE TRIGGER journals_max_per_user
-    BEFORE INSERT OR UPDATE OF user_id ON journals
-    FOR EACH ROW
-    EXECUTE FUNCTION check_journals_max_per_user();
-
 SELECT attach_updated_at_trigger('journals');
