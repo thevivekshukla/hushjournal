@@ -168,7 +168,7 @@ export const updateEntry = (
 	id: string,
 	body: { title?: string; content?: string; entry_date?: string }
 ) =>
-	apiFetch<ApiEntry>(entry(id), {
+	apiFetch<void>(entry(id), {
 		method: 'PATCH',
 		body: JSON.stringify(body)
 	});

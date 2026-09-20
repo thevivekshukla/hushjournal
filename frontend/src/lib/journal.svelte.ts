@@ -546,13 +546,12 @@ class JournalStore {
 		const keepSaving = this.#dirty.has(id) || this.#saveTimers.has(id);
 		if (!keepSaving) this.#setSaveStatus(id, 'saving');
 		try {
-			const row = await api.updateEntry(id, { entry_date: entryDate });
+			await api.updateEntry(id, { entry_date: entryDate });
 			this.entries = this.entries.map((item) =>
 				item.id === id
 					? {
 							...item,
-							entryDate: row.entry_date,
-							updatedAt: row.updated_at,
+							updatedAt: new Date().toISOString(),
 							saveStatus:
 								this.#dirty.has(id) || this.#saveTimers.has(id) ? item.saveStatus : 'saved'
 						}
@@ -597,7 +596,7 @@ class JournalStore {
 		this.#dirty.delete(id);
 		this.#setSaveStatus(id, 'saving');
 		try {
-			const row = await api.updateEntry(id, {
+			await api.updateEntry(id, {
 				title: bytesToBase64(encryptText(dek, entry.title, 'entry.title')),
 				content: bytesToBase64(encryptText(dek, entry.content, 'entry.content'))
 			});
@@ -606,7 +605,7 @@ class JournalStore {
 				item.id === id
 					? {
 							...item,
-							updatedAt: row.updated_at,
+							updatedAt: new Date().toISOString(),
 							saveStatus: 'saved'
 						}
 					: item

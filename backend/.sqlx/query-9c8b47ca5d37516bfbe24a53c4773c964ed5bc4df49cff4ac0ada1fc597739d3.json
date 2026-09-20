@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE entries e\n            SET title = COALESCE($3, e.title),\n                content = COALESCE($4, e.content),\n                entry_date = COALESCE($5, e.entry_date)\n            FROM notebooks s, journals w\n            WHERE e.id = $1\n                AND e.notebook_id = s.id\n                AND s.journal_id = w.id\n                AND w.user_id = $2\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bytea",
+        "Bytea",
+        "Date"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9c8b47ca5d37516bfbe24a53c4773c964ed5bc4df49cff4ac0ada1fc597739d3"
+}

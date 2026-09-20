@@ -216,7 +216,7 @@ pub async fn update(
     title: Option<&[u8]>,
     content: Option<&[u8]>,
     entry_date: Option<NaiveDate>,
-) -> Result<Entry, AppError> {
+) -> Result<(), AppError> {
     if title.is_none() && content.is_none() && entry_date.is_none() {
         return Err(AppError::BadRequest("no fields to update".into()));
     }
@@ -227,8 +227,7 @@ pub async fn update(
         validate_content(content)?;
     }
 
-    sqlx::query_as!(
-        Entry,
+    let result = sqlx::query!(
         r#"
             UPDATE entries e
             SET title = COALESCE($3, e.title),
@@ -239,8 +238,6 @@ pub async fn update(
                 AND e.notebook_id = s.id
                 AND s.journal_id = w.id
                 AND w.user_id = $2
-            RETURNING e.id, e.notebook_id, e.title, e.content, e.total_size, e.entry_date,
-                e.created_at, e.updated_at
         "#,
         id,
         user_id,
@@ -248,10 +245,13 @@ pub async fn update(
         content,
         entry_date,
     )
-    .fetch_optional(pool)
+    .execute(pool)
     .await
-    .map_err(map_db)?
-    .ok_or(AppError::NotFound)
+    .map_err(map_db)?;
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound);
+    }
+    Ok(())
 }
 
 pub async fn delete(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<(), AppError> {

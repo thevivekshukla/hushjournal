@@ -101,18 +101,17 @@ async fn update(
     UserId(user_id): UserId,
     Path(id): Path<Uuid>,
     Json(body): Json<UpdateEntry>,
-) -> Result<Json<Entry>, AppError> {
-    Ok(Json(
-        entries::update(
-            &state.db,
-            user_id,
-            id,
-            body.title.as_deref(),
-            body.content.as_deref(),
-            body.entry_date,
-        )
-        .await?,
-    ))
+) -> Result<StatusCode, AppError> {
+    entries::update(
+        &state.db,
+        user_id,
+        id,
+        body.title.as_deref(),
+        body.content.as_deref(),
+        body.entry_date,
+    )
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn delete(
