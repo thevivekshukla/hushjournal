@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS entries (
-    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    id UUID PRIMARY KEY,
     notebook_id UUID NOT NULL REFERENCES notebooks (id) ON DELETE CASCADE,
     title BYTEA NOT NULL,
     content BYTEA NOT NULL,

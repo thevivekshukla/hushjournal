@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS journals (
-    id UUID PRIMARY KEY DEFAULT uuidv7(),
+    id UUID PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     key_salt BYTEA NOT NULL,

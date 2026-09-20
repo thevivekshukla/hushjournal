@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO users (\n                name, email, is_email_verified, email_verified_at,\n                google_email, google_account_id, google_avatar_url, last_login_at\n            )\n            VALUES ($1, $2, $3, CASE WHEN $3 THEN now() ELSE NULL END, $4, $5, $6, now())\n            RETURNING id, name, username, email, is_email_verified, email_verified_at,\n                google_email, google_account_id, google_avatar_url,\n                is_active, last_login_at, created_at, updated_at\n        ",
+  "query": "\n            INSERT INTO users (\n                id, name, email, is_email_verified, email_verified_at,\n                google_email, google_account_id, google_avatar_url, last_login_at\n            )\n            VALUES ($1, $2, $3, $4, CASE WHEN $4 THEN now() ELSE NULL END, $5, $6, $7, now())\n            RETURNING id, name, username, email, is_email_verified, email_verified_at,\n                google_email, google_account_id, google_avatar_url,\n                is_active, last_login_at, created_at, updated_at\n        ",
   "describe": {
     "columns": [
       {
@@ -149,6 +149,7 @@
     ],
     "parameters": {
       "Left": [
+        "Uuid",
         "Text",
         "Text",
         "Bool",
@@ -173,5 +174,5 @@
       true
     ]
   },
-  "hash": "152ae00e802089a112f2f09bb8be79ba4b92b71b1cc0995022ae64ac38635d79"
+  "hash": "d98d37cca5d528555f665419b452b9926a91e5c2174655adbd7121a51408b060"
 }

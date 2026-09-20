@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use errors::AppError;
 use serde::Serialize;
 use sqlx::PgPool;
+use utils::generate_uuid;
 use uuid::Uuid;
 
 pub use password::{login_with_password, signup_with_password};
@@ -167,14 +168,15 @@ async fn insert_google_user(pool: &PgPool, account: &GoogleAccount) -> Result<Us
         User,
         r#"
             INSERT INTO users (
-                name, email, is_email_verified, email_verified_at,
+                id, name, email, is_email_verified, email_verified_at,
                 google_email, google_account_id, google_avatar_url, last_login_at
             )
-            VALUES ($1, $2, $3, CASE WHEN $3 THEN now() ELSE NULL END, $4, $5, $6, now())
+            VALUES ($1, $2, $3, $4, CASE WHEN $4 THEN now() ELSE NULL END, $5, $6, $7, now())
             RETURNING id, name, username, email, is_email_verified, email_verified_at,
                 google_email, google_account_id, google_avatar_url,
                 is_active, last_login_at, created_at, updated_at
         "#,
+        generate_uuid(),
         name,
         account.email.as_deref(),
         account.email_verified,

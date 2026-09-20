@@ -2,6 +2,7 @@ use chrono::{DateTime, Utc};
 use errors::AppError;
 use serde::Serialize;
 use sqlx::PgPool;
+use utils::generate_uuid;
 use uuid::Uuid;
 
 use crate::{
@@ -115,11 +116,12 @@ pub async fn create(
     sqlx::query_as!(
         Journal,
         r#"
-            INSERT INTO journals (user_id, name, key_salt, encrypted_dek, passphrase_hint, theme)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO journals (id, user_id, name, key_salt, encrypted_dek, passphrase_hint, theme)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING id, user_id, name, key_salt, encrypted_dek, passphrase_hint, mask, theme,
                 total_journal_size, size_last_calculated_at, created_at, updated_at
         "#,
+        generate_uuid(),
         user_id,
         name,
         key_salt,

@@ -3,6 +3,7 @@ use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
 use errors::AppError;
 use sqlx::PgPool;
+use utils::generate_uuid;
 
 use super::{MAX_PASSWORD_LEN, MAX_USERNAME_LEN, MIN_PASSWORD_LEN, MIN_USERNAME_LEN, User, map_db};
 
@@ -21,12 +22,13 @@ pub async fn signup_with_password(
     sqlx::query_as!(
         User,
         r#"
-            INSERT INTO users (name, username, password_hash, last_login_at)
-            VALUES ($1, $2, $3, now())
+            INSERT INTO users (id, name, username, password_hash, last_login_at)
+            VALUES ($1, $2, $3, $4, now())
             RETURNING id, name, username, email, is_email_verified, email_verified_at,
                 google_email, google_account_id, google_avatar_url,
                 is_active, last_login_at, created_at, updated_at
         "#,
+        generate_uuid(),
         name,
         username,
         password_hash,

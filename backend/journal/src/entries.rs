@@ -2,6 +2,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use errors::AppError;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
+use utils::generate_uuid;
 use uuid::Uuid;
 
 use crate::{ENTRY_CONTENT_MAX, ENTRY_TITLE_MAX, map_db, require_bytes_max};
@@ -190,13 +191,14 @@ pub async fn create(
     sqlx::query_as!(
         Entry,
         r#"
-            INSERT INTO entries (notebook_id, title, content, entry_date)
-            SELECT $1, $2, $3, COALESCE($4, CURRENT_DATE)
+            INSERT INTO entries (id, notebook_id, title, content, entry_date)
+            SELECT $1, $2, $3, $4, COALESCE($5, CURRENT_DATE)
             FROM notebooks s
             JOIN journals w ON w.id = s.journal_id
-            WHERE s.id = $1 AND w.user_id = $5
+            WHERE s.id = $2 AND w.user_id = $6
             RETURNING id, notebook_id, title, content, total_size, entry_date, created_at, updated_at
         "#,
+        generate_uuid(),
         notebook_id,
         title,
         content,

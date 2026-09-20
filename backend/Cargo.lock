@@ -1109,6 +1109,7 @@ dependencies = [
  "sqlx",
  "tokio",
  "user",
+ "utils",
  "uuid",
 ]
 
@@ -2430,6 +2431,7 @@ dependencies = [
  "serde",
  "sqlx",
  "tokio",
+ "utils",
  "uuid",
 ]
 

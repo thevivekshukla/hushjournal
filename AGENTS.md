@@ -15,7 +15,7 @@ backend/
   bin/e2ejournal/   # API binary; mount crate routers from src/main.rs
   errors/           # AppError and HTTP error mapping
   db/               # pool, AppState, SQLx migrations
-  utils/            # config, Axum session extractors, shared reqwest client
+  utils/            # config, Axum session extractors, shared reqwest client, generate_uuid
   user/             # user row types and Postgres queries
   user_json/        # Axum JSON handlers / router for user and auth APIs
   journal/          # journal, notebook, and entry row types and Postgres queries
@@ -40,9 +40,10 @@ backend/
 
 - Image: `postgres:18` in `backend/docker-compose.yml`.
 - Mount the data volume at `/var/lib/postgresql` (Postgres 18 image), not `/var/lib/postgresql/data`.
+- Migrations and SQL must work on Postgres 17+. Do not use Postgres 18-only functions such as `uuidv7()`.
 - Do not publish host port `5432`. Use a non-default port (currently `58417:5432`) so it does not clash with other local Postgres instances.
 - Timezone is UTC: database `timezone=UTC`, `timestamptz` columns, `now()` / `CURRENT_TIMESTAMP`.
-- Primary keys are `UUID` with `DEFAULT uuidv7()` (Postgres 18). Do not use `gen_random_uuid()` or UUIDv4. Omit `id` on insert unless you have a reason to pass one.
+- Primary keys are `UUID` with no column default. Inserts must supply `id` from the application with `utils::generate_uuid()` (UUIDv7). Do not use `gen_random_uuid()`, database `uuidv7()`, or UUIDv4.
 - Tables that need timestamps use:
 
 ```sql

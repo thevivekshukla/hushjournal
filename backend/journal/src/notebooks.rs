@@ -2,6 +2,7 @@ use chrono::{DateTime, Utc};
 use errors::AppError;
 use serde::Serialize;
 use sqlx::PgPool;
+use utils::generate_uuid;
 use uuid::Uuid;
 
 use crate::{MAX_ICON_LEN, NOTEBOOK_NAME_MAX, map_db, require_bytes_max};
@@ -83,13 +84,14 @@ pub async fn create(
     sqlx::query_as!(
         Notebook,
         r#"
-            INSERT INTO notebooks (journal_id, name, icon)
-            SELECT $1, $2, $3
+            INSERT INTO notebooks (id, journal_id, name, icon)
+            SELECT $1, $2, $3, $4
             FROM journals
-            WHERE id = $1 AND user_id = $4
+            WHERE id = $2 AND user_id = $5
             RETURNING id, journal_id, name, icon, total_notebook_size,
                 size_last_calculated_at, created_at, updated_at
         "#,
+        generate_uuid(),
         journal_id,
         name,
         icon,

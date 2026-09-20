@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO users (name, username, password_hash, last_login_at)\n            VALUES ($1, $2, $3, now())\n            RETURNING id, name, username, email, is_email_verified, email_verified_at,\n                google_email, google_account_id, google_avatar_url,\n                is_active, last_login_at, created_at, updated_at\n        ",
+  "query": "\n            INSERT INTO users (id, name, username, password_hash, last_login_at)\n            VALUES ($1, $2, $3, $4, now())\n            RETURNING id, name, username, email, is_email_verified, email_verified_at,\n                google_email, google_account_id, google_avatar_url,\n                is_active, last_login_at, created_at, updated_at\n        ",
   "describe": {
     "columns": [
       {
@@ -149,6 +149,7 @@
     ],
     "parameters": {
       "Left": [
+        "Uuid",
         "Text",
         "Text",
         "Text"
@@ -170,5 +171,5 @@
       true
     ]
   },
-  "hash": "1fea6de189a50ce5c18d2f01d0c70c65053a68e93aac72598836725df1f12219"
+  "hash": "cd4e1c4808bb61cc7542912de12a1cd72cedd4ec1c739b131664b675566e0e38"
 }
