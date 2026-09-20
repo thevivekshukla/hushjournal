@@ -16,6 +16,10 @@ use utils::Config;
 
 mod spa;
 
+#[cfg(target_env = "musl")]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 #[derive(Parser)]
 #[command(name = "e2ejournal", about = "End-to-end encrypted journal API")]
 struct Cli {

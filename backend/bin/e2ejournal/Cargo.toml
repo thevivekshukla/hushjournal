@@ -22,3 +22,6 @@ user_json.workspace = true
 utils.workspace = true
 journal.workspace = true
 journal_json.workspace = true
+
+[target.'cfg(target_env = "musl")'.dependencies]
+mimalloc = { version = "0.1", default-features = false }
