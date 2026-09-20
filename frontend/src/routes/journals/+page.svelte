@@ -6,6 +6,7 @@
 	import PassphraseStrength from '$lib/components/PassphraseStrength.svelte';
 	import ThemePicker from '$lib/components/ThemePicker.svelte';
 	import NoIndex from '$lib/components/NoIndex.svelte';
+	import SiteName from '$lib/components/SiteName.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import UserMenu from '$lib/components/UserMenu.svelte';
 	import { CryptoError, journal } from '$lib/journal.svelte';
@@ -124,8 +125,8 @@
 	<div class="mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-5 py-6">
 		<header class="flex items-center justify-between gap-3">
 			<div>
-				<p class="font-serif text-lg tracking-tight">HushJournal</p>
-				<p class="text-sm text-base-content/60">Choose a journal to unlock.</p>
+				<SiteName />
+				<p class="mt-2 text-sm text-base-content/60">Choose a journal to unlock.</p>
 			</div>
 			<div class="flex items-center gap-1">
 				<ThemeToggle />
