@@ -19,6 +19,18 @@
 		children?: Snippet;
 		footer?: Snippet;
 	} = $props();
+
+	let contentEl = $state.raw<HTMLElement | null>(null);
+
+	function onOpenAutoFocus(event: Event) {
+		event.preventDefault();
+		requestAnimationFrame(() => {
+			const field = contentEl?.querySelector<HTMLElement>(
+				'input:not([type="hidden"]), textarea, select'
+			);
+			(field ?? contentEl)?.focus();
+		});
+	}
 </script>
 
 <Dialog.Root bind:open>
@@ -31,11 +43,13 @@
 			data-theme={theme || undefined}
 		/>
 		<Dialog.Content
+			bind:ref={contentEl}
 			class={[
 				'fixed top-1/2 left-1/2 flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-base-300 bg-base-100 p-6 shadow-xl',
 				nested ? 'z-[60]' : 'z-50'
 			]}
 			data-theme={theme || undefined}
+			{onOpenAutoFocus}
 		>
 			<Dialog.Title class="shrink-0 pr-10 font-serif text-xl font-semibold tracking-tight"
 				>{title}</Dialog.Title

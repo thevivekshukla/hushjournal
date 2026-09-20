@@ -24,24 +24,13 @@
 	let visible = $state(false);
 </script>
 
-<div class="w-full">
-	<div class="mb-1 flex items-center justify-between">
-		<label class="text-sm" for={id}>{label}</label>
-		<button
-			type="button"
-			class="text-xs text-base-content/50"
-			aria-pressed={visible}
-			aria-controls={id}
-			onclick={() => (visible = !visible)}
-		>
-			{visible ? 'Hide' : 'Show'}
-		</button>
-	</div>
+<div class="grid w-full grid-cols-[1fr_auto] items-center gap-x-2">
+	<label class="mb-1 text-sm" for={id}>{label}</label>
 	<!-- svelte-ignore a11y_autofocus -->
 	<input
 		{id}
 		{name}
-		class="input w-full"
+		class="input col-span-2 w-full"
 		type={visible ? 'text' : 'password'}
 		{autocomplete}
 		aria-describedby={describedby}
@@ -52,4 +41,13 @@
 		{autofocus}
 		{minlength}
 	/>
+	<button
+		type="button"
+		class="col-start-2 row-start-1 mb-1 text-xs text-base-content/50"
+		aria-pressed={visible}
+		aria-controls={id}
+		onclick={() => (visible = !visible)}
+	>
+		{visible ? 'Hide' : 'Show'}
+	</button>
 </div>

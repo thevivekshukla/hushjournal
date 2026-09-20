@@ -75,6 +75,7 @@
 		name="current-passphrase"
 		label="Current passphrase"
 		autocomplete="current-password"
+		autofocus
 		bind:value={currentPassphrase}
 		onkeydown={(event) => event.key === 'Enter' && !busy && void save()}
 	/>
