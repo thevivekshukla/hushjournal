@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import favicon from '$lib/assets/favicon.svg';
 	import { session } from '$lib/session.svelte';
 	import './layout.css';
 
@@ -12,7 +11,6 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
 	<title>HushJournal</title>
 </svelte:head>
 
