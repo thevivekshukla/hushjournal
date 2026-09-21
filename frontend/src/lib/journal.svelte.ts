@@ -8,7 +8,8 @@ import {
 	encryptText,
 	equalBytes,
 	unlockDek,
-	wrapDek
+	wrapDek,
+	type Purpose
 } from '$lib/crypto';
 import { ApiError } from '$lib/http';
 import { MIN_PASSPHRASE_LEN, minPassphraseLengthError } from '$lib/passphrase';
@@ -113,55 +114,82 @@ function mapJournal(row: api.ApiJournal): Journal {
 	};
 }
 
-function mapNotebook(row: api.ApiNotebook, dek: Uint8Array): Notebook {
-	let name = 'Unable to decrypt';
+function openField(dek: Uint8Array, blob: string, purpose: Purpose, id: string) {
 	try {
-		name = decryptText(dek, base64ToBytes(row.name), 'notebook.name');
+		return decryptText(dek, base64ToBytes(blob), purpose, id);
 	} catch {
-		// Keep the fallback label when ciphertext does not match this DEK.
+		return null;
 	}
+}
+
+function mapNotebook(
+	row: api.ApiNotebook,
+	dek: Uint8Array
+): { notebook: Notebook; legacy: boolean } {
+	const opened = openField(dek, row.name, 'notebook.name', row.id);
 	return {
-		id: row.id,
-		journalId: row.journal_id,
-		name,
-		icon: notebookIcon(row.icon),
-		totalSize: row.total_notebook_size ?? 0,
-		sizeLastCalculatedAt: row.size_last_calculated_at
+		notebook: {
+			id: row.id,
+			journalId: row.journal_id,
+			name: opened?.text ?? 'Unable to decrypt',
+			icon: notebookIcon(row.icon),
+			totalSize: row.total_notebook_size ?? 0,
+			sizeLastCalculatedAt: row.size_last_calculated_at
+		},
+		legacy: opened?.legacy ?? false
 	};
 }
 
-function mapEntrySummary(row: api.ApiEntrySummary, dek: Uint8Array, previous?: Entry): Entry {
-	let title = 'Unable to decrypt';
-	try {
-		title = decryptText(dek, base64ToBytes(row.title), 'entry.title');
-	} catch {
-		// Keep the fallback label when ciphertext does not match this DEK.
-	}
+function mapEntrySummary(
+	row: api.ApiEntrySummary,
+	dek: Uint8Array,
+	previous?: Entry
+): { entry: Entry; legacyTitle: boolean } {
+	const opened = openField(dek, row.title, 'entry.title', row.id);
+	const title = opened?.text ?? 'Unable to decrypt';
+	const keepLocal = previous?.contentLoaded === true;
 	return {
-		id: row.id,
-		notebookId: row.notebook_id,
-		title: previous?.contentLoaded ? previous.title : title,
-		content: previous?.contentLoaded ? previous.content : '',
-		contentLoaded: previous?.contentLoaded ?? false,
-		saveStatus: previous?.saveStatus ?? 'saved',
-		entryDate: row.entry_date,
-		createdAt: row.created_at,
-		updatedAt: row.updated_at
+		entry: {
+			id: row.id,
+			notebookId: row.notebook_id,
+			title: keepLocal && previous ? previous.title : title,
+			content: keepLocal && previous ? previous.content : '',
+			contentLoaded: previous?.contentLoaded ?? false,
+			saveStatus: previous?.saveStatus ?? 'saved',
+			entryDate: row.entry_date,
+			createdAt: row.created_at,
+			updatedAt: row.updated_at
+		},
+		legacyTitle: keepLocal ? false : (opened?.legacy ?? false)
 	};
 }
 
-function mapFullEntry(row: api.ApiEntry, dek: Uint8Array, previous?: Entry): Entry {
+function mapFullEntry(
+	row: api.ApiEntry,
+	dek: Uint8Array,
+	previous?: Entry
+): { entry: Entry; legacyTitle: boolean; legacyContent: boolean } {
 	const summary = mapEntrySummary(row, dek, previous);
 	try {
+		const title = decryptText(dek, base64ToBytes(row.title), 'entry.title', row.id);
+		const content = decryptText(dek, base64ToBytes(row.content), 'entry.content', row.id);
 		return {
-			...summary,
-			title: decryptText(dek, base64ToBytes(row.title), 'entry.title'),
-			content: decryptText(dek, base64ToBytes(row.content), 'entry.content'),
-			contentLoaded: true,
-			saveStatus: previous?.saveStatus === 'saving' ? 'saving' : 'saved'
+			entry: {
+				...summary.entry,
+				title: title.text,
+				content: content.text,
+				contentLoaded: true,
+				saveStatus: previous?.saveStatus === 'saving' ? 'saving' : 'saved'
+			},
+			legacyTitle: title.legacy,
+			legacyContent: content.legacy
 		};
 	} catch {
-		return { ...summary, contentLoaded: true };
+		return {
+			entry: { ...summary.entry, contentLoaded: true },
+			legacyTitle: false,
+			legacyContent: false
+		};
 	}
 }
 
@@ -179,10 +207,15 @@ class JournalStore {
 	error = $state<string | null>(null);
 	#saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 	#dirty = new Set<string>();
+	#inflight = new Map<string, number>();
+	#writes = new Map<string, Promise<void>>();
+	#rebinds = new Set<string>();
+	#revs = new Map<string, number>();
 	#contentLoads = new Map<string, Promise<Entry | null>>();
 	#nextCursor: string | null = null;
 	#entriesLoad = 0;
 	#notebooksLoad = 0;
+	#view = 0;
 
 	getJournal(id: string) {
 		return this.journals.find((item) => item.id === id);
@@ -204,6 +237,15 @@ class JournalStore {
 	}
 
 	clearJournal() {
+		for (const timer of this.#saveTimers.values()) clearTimeout(timer);
+		this.#saveTimers.clear();
+		this.#dirty.clear();
+		this.#inflight.clear();
+		this.#writes.clear();
+		this.#rebinds.clear();
+		this.#revs.clear();
+		this.#contentLoads.clear();
+		this.#view += 1;
 		this.notebooks = [];
 		this.entries = [];
 		this.error = null;
@@ -215,6 +257,14 @@ class JournalStore {
 		this.#nextCursor = null;
 		this.#entriesLoad += 1;
 		this.#notebooksLoad += 1;
+	}
+
+	#bump(id: string) {
+		this.#revs.set(id, (this.#revs.get(id) ?? 0) + 1);
+	}
+
+	#sealed(dek: Uint8Array, text: string, purpose: Purpose, id: string) {
+		return bytesToBase64(encryptText(dek, text, purpose, id));
 	}
 
 	async loadJournals() {
@@ -272,14 +322,15 @@ class JournalStore {
 			this.journals = [journal, ...this.journals];
 			session.unlock(journal.id, secrets.dek);
 			try {
-				const notebook = mapNotebook(
+				const created = mapNotebook(
 					await api.createNotebook(journal.id, {
 						name: bytesToBase64(encryptText(secrets.dek, 'Notes', 'notebook.name')),
 						icon: NOTEBOOK_ICONS[0]
 					}),
 					secrets.dek
 				);
-				this.notebooks = [...this.notebooks, notebook];
+				if (created.legacy) await this.#rebindNotebook(created.notebook);
+				this.notebooks = [...this.notebooks, created.notebook];
 			} catch {
 				// The journal is usable; a notebook can be added after opening it.
 			}
@@ -361,10 +412,13 @@ class JournalStore {
 		const load = this.#notebooksLoad;
 		this.error = null;
 		try {
-			const rows = (await api.listNotebooks(journalId)).map((row) => mapNotebook(row, dek));
+			const mapped = (await api.listNotebooks(journalId)).map((row) => mapNotebook(row, dek));
 			if (load !== this.#notebooksLoad) return;
-			this.notebooks = rows;
+			this.notebooks = mapped.map((item) => item.notebook);
 			this.notebooksLoadedFor = journalId;
+			for (const item of mapped) {
+				if (item.legacy) void this.#rebindNotebook(item.notebook);
+			}
 		} catch (error) {
 			this.error = error instanceof Error ? error.message : 'Could not load notebooks.';
 			throw error;
@@ -375,26 +429,29 @@ class JournalStore {
 
 	async createNotebook(journalId: string, name: string, icon: string) {
 		const dek = session.requireDek();
-		const notebook = mapNotebook(
+		const mapped = mapNotebook(
 			await api.createNotebook(journalId, {
 				name: bytesToBase64(encryptText(dek, name, 'notebook.name')),
 				icon
 			}),
 			dek
 		);
-		this.notebooks = [...this.notebooks, notebook];
-		return notebook;
+		if (mapped.legacy) await this.#rebindNotebook(mapped.notebook);
+		this.notebooks = [...this.notebooks, mapped.notebook];
+		return mapped.notebook;
 	}
 
 	async updateNotebook(id: string, patch: { name?: string; icon?: string }) {
+		this.#bump(id);
 		const dek = session.requireDek();
 		const body: { name?: string; icon?: string } = {};
 		if (patch.name !== undefined) {
-			body.name = bytesToBase64(encryptText(dek, patch.name, 'notebook.name'));
+			body.name = this.#sealed(dek, patch.name, 'notebook.name', id);
 		}
 		if (patch.icon !== undefined) body.icon = patch.icon;
-		const notebook = mapNotebook(await api.updateNotebook(id, body), dek);
-		this.notebooks = this.notebooks.map((item) => (item.id === id ? notebook : item));
+		const mapped = mapNotebook(await api.updateNotebook(id, body), dek);
+		this.notebooks = this.notebooks.map((item) => (item.id === id ? mapped.notebook : item));
+		if (mapped.legacy) void this.#rebindNotebook(mapped.notebook);
 	}
 
 	async deleteNotebook(id: string) {
@@ -426,13 +483,14 @@ class JournalStore {
 			if (!append && load !== this.#entriesLoad) return;
 			const previous = new Map(this.entries.map((entry) => [entry.id, entry]));
 			const incoming = page.entries.map((row) => mapEntrySummary(row, dek, previous.get(row.id)));
+			const incomingEntries = incoming.map((item) => item.entry);
 			if (append) {
 				const seen = new Set(
 					this.entries.filter((entry) => entry.notebookId === notebookId).map((entry) => entry.id)
 				);
-				this.entries = [...this.entries, ...incoming.filter((entry) => !seen.has(entry.id))];
+				this.entries = [...this.entries, ...incomingEntries.filter((entry) => !seen.has(entry.id))];
 			} else {
-				const incomingIds = new Set(incoming.map((entry) => entry.id));
+				const incomingIds = new Set(incomingEntries.map((entry) => entry.id));
 				const kept = this.entries.filter(
 					(entry) =>
 						entry.notebookId === notebookId &&
@@ -441,12 +499,15 @@ class JournalStore {
 				);
 				this.entries = [
 					...this.entries.filter((entry) => entry.notebookId !== notebookId),
-					...incoming,
+					...incomingEntries,
 					...kept
 				];
 			}
 			this.#nextCursor = page.next_cursor;
 			this.hasMore = page.next_cursor != null;
+			for (const item of incoming) {
+				if (item.legacyTitle) void this.#rebindEntry(item.entry, { title: true });
+			}
 		} catch (error) {
 			this.error = error instanceof Error ? error.message : 'Could not load notes.';
 		} finally {
@@ -476,25 +537,42 @@ class JournalStore {
 	async #fetchEntry(id: string): Promise<Entry | null> {
 		const dek = session.dek;
 		if (!dek) return null;
+		const view = this.#view;
+		const keepLocal = () => this.#dirty.has(id) || this.#inflight.has(id);
+		const previous = this.entry(id);
+		if (previous && keepLocal()) return this.#markLoaded(id) ?? previous;
 		try {
 			const row = await api.getEntry(id);
-			const previous = this.entry(id);
-			if (previous && this.#dirty.has(id)) {
-				this.entries = this.entries.map((entry) =>
-					entry.id === id ? { ...entry, contentLoaded: true } : entry
-				);
-				return this.entry(id) ?? previous;
+			if (view !== this.#view || !session.dek) return null;
+			const latest = this.entry(id);
+			if (latest && keepLocal()) return this.#markLoaded(id) ?? latest;
+			const mapped = mapFullEntry(row, dek, latest);
+			this.entries = latest
+				? this.entries.map((entry) => (entry.id === id ? mapped.entry : entry))
+				: [...this.entries, mapped.entry];
+			if (mapped.legacyTitle || mapped.legacyContent) {
+				await this.#rebindEntry(mapped.entry, {
+					title: mapped.legacyTitle,
+					content: mapped.legacyContent
+				});
 			}
-			const loaded = mapFullEntry(row, dek, previous);
-			this.entries = previous
-				? this.entries.map((entry) => (entry.id === id ? loaded : entry))
-				: [...this.entries, loaded];
-			return loaded;
+			if (view !== this.#view) return null;
+			return this.entry(id) ?? mapped.entry;
 		} catch (error) {
 			if (error instanceof ApiError && error.status === 404) return null;
+			if (view !== this.#view) return null;
 			this.error = error instanceof Error ? error.message : 'Could not load the note.';
 			throw error;
 		}
+	}
+
+	#markLoaded(id: string) {
+		const current = this.entry(id);
+		if (!current || current.contentLoaded) return current;
+		this.entries = this.entries.map((entry) =>
+			entry.id === id ? { ...entry, contentLoaded: true } : entry
+		);
+		return this.entry(id);
 	}
 
 	async createEntry(notebookId: string, title = formatEntryDate()) {
@@ -504,7 +582,8 @@ class JournalStore {
 			content: bytesToBase64(encryptText(dek, '', 'entry.content')),
 			entry_date: isoDate()
 		});
-		const entry = mapFullEntry(row, dek);
+		const mapped = mapFullEntry(row, dek);
+		const entry = mapped.entry;
 		const others = this.entries.filter((item) => item.notebookId !== notebookId);
 		const loaded = this.entries.filter((item) => item.notebookId === notebookId);
 		const sign = this.entryOrder === 'asc' ? 1 : -1;
@@ -512,10 +591,17 @@ class JournalStore {
 			...others,
 			...[...loaded, entry].toSorted((a, b) => sign * a.id.localeCompare(b.id))
 		];
-		return entry;
+		if (mapped.legacyTitle || mapped.legacyContent) {
+			await this.#rebindEntry(entry, {
+				title: mapped.legacyTitle,
+				content: mapped.legacyContent
+			});
+		}
+		return this.entry(entry.id) ?? entry;
 	}
 
 	updateEntry(id: string, patch: { title?: string; content?: string }) {
+		this.#bump(id);
 		this.entries = this.entries.map((entry) =>
 			entry.id === id
 				? {
@@ -569,17 +655,24 @@ class JournalStore {
 		this.entries = this.entries.filter((entry) => entry.id !== id);
 	}
 
-	async flush(id?: string) {
+	async flush(id?: string, opts?: { keepalive?: boolean }) {
+		const run = (pendingId: string) => {
+			this.#cancelSave(pendingId, false);
+			if (!this.#dirty.has(pendingId)) return Promise.resolve();
+			return this.#save(pendingId, opts);
+		};
 		if (id) {
-			this.#cancelSave(id, false);
-			if (this.#dirty.has(id)) await this.#save(id);
+			await run(id);
 			return;
 		}
 		const ids = [...new Set([...this.#dirty, ...this.#saveTimers.keys()])];
-		for (const pendingId of ids) {
-			this.#cancelSave(pendingId, false);
-			if (this.#dirty.has(pendingId)) await this.#save(pendingId);
+		if (opts?.keepalive) {
+			const pending = [...new Set([...ids, ...this.#inflight.keys()])];
+			for (const pendingId of pending) this.#dirty.add(pendingId);
+			await Promise.all(pending.map((pendingId) => run(pendingId)));
+			return;
 		}
+		for (const pendingId of ids) await run(pendingId);
 	}
 
 	#cancelSave(id: string, forgetDirty = true) {
@@ -589,18 +682,41 @@ class JournalStore {
 		if (forgetDirty) this.#dirty.delete(id);
 	}
 
-	async #save(id: string) {
+	async #save(id: string, opts?: { keepalive?: boolean }) {
+		if (opts?.keepalive) {
+			await this.#writeEntry(id, opts);
+			return;
+		}
+		const previous = this.#writes.get(id) ?? Promise.resolve();
+		const current = previous.catch(() => undefined).then(() => this.#writeEntry(id));
+		this.#writes.set(id, current);
+		try {
+			await current;
+		} finally {
+			if (this.#writes.get(id) === current) this.#writes.delete(id);
+		}
+	}
+
+	async #writeEntry(id: string, opts?: { keepalive?: boolean }) {
+		const view = this.#view;
 		const dek = session.dek;
 		const entry = this.entry(id);
 		if (!dek || !entry || !this.#dirty.has(id)) return;
+		const title = entry.title;
+		const content = entry.content;
 		this.#dirty.delete(id);
+		this.#inflight.set(id, (this.#inflight.get(id) ?? 0) + 1);
 		this.#setSaveStatus(id, 'saving');
 		try {
-			await api.updateEntry(id, {
-				title: bytesToBase64(encryptText(dek, entry.title, 'entry.title')),
-				content: bytesToBase64(encryptText(dek, entry.content, 'entry.content'))
-			});
-			if (this.#dirty.has(id)) return;
+			await api.updateEntry(
+				id,
+				{
+					title: this.#sealed(dek, title, 'entry.title', id),
+					content: this.#sealed(dek, content, 'entry.content', id)
+				},
+				opts
+			);
+			if (view !== this.#view || !session.dek || this.#dirty.has(id)) return;
 			this.entries = this.entries.map((item) =>
 				item.id === id
 					? {
@@ -611,9 +727,74 @@ class JournalStore {
 					: item
 			);
 		} catch (error) {
+			if (view !== this.#view || !session.dek) return;
 			this.#dirty.add(id);
 			this.#setSaveStatus(id, 'error');
 			this.error = error instanceof Error ? error.message : 'Could not save.';
+		} finally {
+			const left = (this.#inflight.get(id) ?? 1) - 1;
+			if (left <= 0) this.#inflight.delete(id);
+			else this.#inflight.set(id, left);
+		}
+	}
+
+	async #rebindNotebook(notebook: Notebook) {
+		const slot = `notebook:${notebook.id}`;
+		if (this.#rebinds.has(slot) || notebook.name === 'Unable to decrypt' || !session.dek) return;
+		this.#rebinds.add(slot);
+		const rev = this.#revs.get(notebook.id) ?? 0;
+		const view = this.#view;
+		const dek = session.dek;
+		try {
+			await api.updateNotebook(notebook.id, {
+				name: this.#sealed(dek, notebook.name, 'notebook.name', notebook.id)
+			});
+			if (view !== this.#view || !session.dek || (this.#revs.get(notebook.id) ?? 0) === rev) return;
+			const current = this.notebooks.find((item) => item.id === notebook.id);
+			const dekNow = session.dek;
+			if (!current || !dekNow) return;
+			await api.updateNotebook(notebook.id, {
+				name: this.#sealed(dekNow, current.name, 'notebook.name', notebook.id)
+			});
+		} catch {
+			this.#rebinds.delete(slot);
+		}
+	}
+
+	async #rebindEntry(entry: Entry, which: { title?: boolean; content?: boolean }) {
+		const title = which.title === true && entry.title !== 'Unable to decrypt';
+		const content = which.content === true;
+		if (!title && !content) return;
+		const slot = `entry:${entry.id}:${title ? 't' : ''}${content ? 'c' : ''}`;
+		if (this.#rebinds.has(slot) || !session.dek) return;
+		if (
+			this.#dirty.has(entry.id) ||
+			this.#inflight.has(entry.id) ||
+			this.#saveTimers.has(entry.id)
+		) {
+			return;
+		}
+		this.#rebinds.add(slot);
+		const rev = this.#revs.get(entry.id) ?? 0;
+		const view = this.#view;
+		const dek = session.dek;
+		const body: { title?: string; content?: string } = {};
+		if (title) body.title = this.#sealed(dek, entry.title, 'entry.title', entry.id);
+		if (content) body.content = this.#sealed(dek, entry.content, 'entry.content', entry.id);
+		try {
+			await api.updateEntry(entry.id, body);
+			if (view !== this.#view || !session.dek) return;
+			const edited =
+				(this.#revs.get(entry.id) ?? 0) !== rev ||
+				this.#dirty.has(entry.id) ||
+				this.#inflight.has(entry.id);
+			if (!edited) return;
+			const current = this.entry(entry.id);
+			if (!current?.contentLoaded) return;
+			this.#dirty.add(entry.id);
+			await this.#save(entry.id);
+		} catch {
+			this.#rebinds.delete(slot);
 		}
 	}
 
@@ -627,3 +808,5 @@ class JournalStore {
 export { CryptoError };
 
 export const journal = new JournalStore();
+
+session.setAfterClear(() => journal.clearJournal());

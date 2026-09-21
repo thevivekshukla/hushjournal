@@ -20,8 +20,10 @@ export class CryptoError extends Error {
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-function aad(purpose: Purpose): Uint8Array {
-	// Stable AEAD domain; do not change or existing ciphertext will not decrypt.
+function aad(purpose: Purpose, id?: string): Uint8Array {
+	// v1 is not tied to a row. Leave that string unchanged so existing blobs still open.
+	// v2 includes the notebook or entry id so a swapped blob fails authentication.
+	if (id) return encoder.encode(`hushjournal:v2:${purpose}:${id}`);
 	return encoder.encode(`hushjournal:v1:${purpose}`);
 }
 
@@ -29,9 +31,14 @@ async function deriveKek(passphrase: string, salt: Uint8Array) {
 	return argon2idAsync(encoder.encode(passphrase), salt, ARGON2);
 }
 
-export function encryptBytes(key: Uint8Array, plaintext: Uint8Array, purpose: Purpose): Uint8Array {
+export function encryptBytes(
+	key: Uint8Array,
+	plaintext: Uint8Array,
+	purpose: Purpose,
+	id?: string
+): Uint8Array {
 	const nonce = randomBytes(NONCE_LEN);
-	const ciphertext = gcmsiv(key, nonce, aad(purpose)).encrypt(plaintext);
+	const ciphertext = gcmsiv(key, nonce, aad(purpose, id)).encrypt(plaintext);
 	const out = new Uint8Array(1 + nonce.length + ciphertext.length);
 	out[0] = VERSION;
 	out.set(nonce, 1);
@@ -39,25 +46,45 @@ export function encryptBytes(key: Uint8Array, plaintext: Uint8Array, purpose: Pu
 	return out;
 }
 
-export function decryptBytes(key: Uint8Array, blob: Uint8Array, purpose: Purpose): Uint8Array {
+export function decryptBytes(
+	key: Uint8Array,
+	blob: Uint8Array,
+	purpose: Purpose,
+	id?: string
+): Uint8Array {
 	if (blob.length < 1 + NONCE_LEN + 16 || blob[0] !== VERSION) {
 		throw new CryptoError();
 	}
 	const nonce = blob.subarray(1, 1 + NONCE_LEN);
 	const ciphertext = blob.subarray(1 + NONCE_LEN);
 	try {
-		return gcmsiv(key, nonce, aad(purpose)).decrypt(ciphertext);
+		return gcmsiv(key, nonce, aad(purpose, id)).decrypt(ciphertext);
 	} catch {
 		throw new CryptoError();
 	}
 }
 
-export function encryptText(key: Uint8Array, plaintext: string, purpose: Purpose): Uint8Array {
-	return encryptBytes(key, encoder.encode(plaintext), purpose);
+export function encryptText(
+	key: Uint8Array,
+	plaintext: string,
+	purpose: Purpose,
+	id?: string
+): Uint8Array {
+	return encryptBytes(key, encoder.encode(plaintext), purpose, id);
 }
 
-export function decryptText(key: Uint8Array, blob: Uint8Array, purpose: Purpose): string {
-	return decoder.decode(decryptBytes(key, blob, purpose));
+export function decryptText(
+	key: Uint8Array,
+	blob: Uint8Array,
+	purpose: Purpose,
+	id: string
+): { text: string; legacy: boolean } {
+	try {
+		return { text: decoder.decode(decryptBytes(key, blob, purpose, id)), legacy: false };
+	} catch (error) {
+		if (!(error instanceof CryptoError)) throw error;
+	}
+	return { text: decoder.decode(decryptBytes(key, blob, purpose)), legacy: true };
 }
 
 export async function wrapDek(passphrase: string, dek: Uint8Array) {

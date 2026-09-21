@@ -38,6 +38,7 @@
 	let editMask = $state(false);
 	let editTheme = $state<JournalTheme>('');
 	let busy = $state(false);
+	let journalSwitch = 0;
 	let passphrase = $state('');
 	let unlockError = $state('');
 	let unlockBusy = $state(false);
@@ -75,6 +76,7 @@
 	});
 
 	$effect(() => {
+		const ticket = ++journalSwitch;
 		if (!session.user) {
 			void goto(api.login());
 			return;
@@ -82,21 +84,28 @@
 		if (session.unlockedJournalId === journalId) return;
 		const id = journalId;
 		untrack(() => {
-			if (session.unlockedJournalId) {
-				void journal.flush();
-				session.lock();
-				journal.clearJournal();
-			}
-			void journal
-				.loadJournal(id)
-				.then((loaded) => {
+			void (async () => {
+				if (session.unlockedJournalId) {
+					try {
+						await journal.flush();
+					} catch {
+						// flush records the save error. Still drop this journal's key.
+					}
+					if (ticket !== journalSwitch) return;
+					session.lock();
+					journal.clearJournal();
+				}
+				if (ticket !== journalSwitch) return;
+				try {
+					const loaded = await journal.loadJournal(id);
+					if (ticket !== journalSwitch) return;
 					if (!loaded && page.params.journalId === id) {
 						void goto(api.journals(), { replaceState: true });
 					}
-				})
-				.catch(() => {
+				} catch {
 					// loadJournal already records journal.error
-				});
+				}
+			})();
 		});
 	});
 
@@ -269,11 +278,15 @@
 		journalEditOpen = true;
 	}
 
-	function lockJournal() {
-		void journal.flush();
+	async function lockJournal() {
+		try {
+			await journal.flush();
+		} catch {
+			// flush records the save error. Still lock before leaving.
+		}
 		session.lock();
 		journal.clearJournal();
-		void goto(api.journals());
+		await goto(api.journals());
 	}
 
 	async function unlockJournal() {
@@ -294,7 +307,7 @@
 	}
 
 	function onPageHide() {
-		void journal.flush();
+		void journal.flush(undefined, { keepalive: true });
 	}
 
 	$effect(() => {

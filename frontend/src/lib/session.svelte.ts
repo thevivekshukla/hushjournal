@@ -29,9 +29,14 @@ class Session {
 	loadError = $state<string | null>(null);
 	unlockedJournalId = $state<string | null>(null);
 	#dek: Uint8Array | null = null;
+	#afterClear: (() => void) | null = null;
 
 	constructor() {
 		setUnauthorizedHandler(() => this.clearLocal());
+	}
+
+	setAfterClear(handler: () => void) {
+		this.#afterClear = handler;
 	}
 
 	get dek() {
@@ -82,6 +87,7 @@ class Session {
 	clearLocal() {
 		this.lock();
 		this.user = null;
+		this.#afterClear?.();
 	}
 
 	async logout() {

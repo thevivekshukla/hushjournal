@@ -10,18 +10,24 @@
 	const user = $derived(session.user);
 	const initial = $derived(user?.name?.charAt(0).toUpperCase() ?? '?');
 
-	function goJournals() {
-		void journal.flush();
+	async function goJournals() {
+		try {
+			await journal.flush();
+		} catch {
+			// flush records the save error. Still lock before leaving.
+		}
 		session.lock();
 		journal.clearJournal();
-		void goto(api.journals());
+		await goto(api.journals());
 	}
 
 	async function logout() {
-		await journal.flush();
-		await session.logout();
-		journal.clearJournal();
-		void goto(api.login());
+		try {
+			await journal.flush();
+		} finally {
+			await session.logout();
+			await goto(api.login());
+		}
 	}
 </script>
 

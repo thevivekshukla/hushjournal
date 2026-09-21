@@ -164,12 +164,18 @@ export const createEntry = (
 		method: 'POST',
 		body: JSON.stringify(body)
 	});
+const KEEPALIVE_MAX_BYTES = 60_000;
+
 export const updateEntry = (
 	id: string,
-	body: { title?: string; content?: string; entry_date?: string }
-) =>
-	apiFetch<void>(entry(id), {
+	body: { title?: string; content?: string; entry_date?: string },
+	opts?: { keepalive?: boolean }
+) => {
+	const payload = JSON.stringify(body);
+	return apiFetch<void>(entry(id), {
 		method: 'PATCH',
-		body: JSON.stringify(body)
+		body: payload,
+		keepalive: Boolean(opts?.keepalive) && payload.length <= KEEPALIVE_MAX_BYTES
 	});
+};
 export const deleteEntry = (id: string) => apiFetch<void>(entry(id), { method: 'DELETE' });
