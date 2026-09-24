@@ -14,10 +14,7 @@ export default defineConfig({
 			},
 			adapter: adapter({
 				fallback: '200.html'
-			}),
-			output: {
-				bundleStrategy: 'single'
-			}
+			})
 		})
 	],
 	server: {
