@@ -18,7 +18,7 @@
 		type Notebook
 	} from '$lib/journal.svelte';
 	import { session } from '$lib/session.svelte';
-	import { restoreAppTheme, type JournalTheme } from '$lib/theme';
+	import { restoreAppTheme } from '$lib/theme';
 	import { untrack } from 'svelte';
 	import type { Attachment } from 'svelte/attachments';
 
@@ -36,7 +36,6 @@
 	let editName = $state('');
 	let editHint = $state('');
 	let editMask = $state(false);
-	let editTheme = $state<JournalTheme>('');
 	let busy = $state(false);
 	let journalSwitch = 0;
 	let passphrase = $state('');
@@ -274,7 +273,6 @@
 		editName = activeJournal.name;
 		editHint = activeJournal.passphraseHint ?? '';
 		editMask = activeJournal.mask;
-		editTheme = activeJournal.theme;
 		journalEditOpen = true;
 	}
 
@@ -776,5 +774,4 @@
 	bind:name={editName}
 	bind:hint={editHint}
 	bind:mask={editMask}
-	bind:theme={editTheme}
 />

@@ -4,7 +4,6 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import PassphraseField from '$lib/components/PassphraseField.svelte';
 	import PassphraseStrength from '$lib/components/PassphraseStrength.svelte';
-	import ThemePicker from '$lib/components/ThemePicker.svelte';
 	import NoIndex from '$lib/components/NoIndex.svelte';
 	import SiteName from '$lib/components/SiteName.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
@@ -12,7 +11,6 @@
 	import { CryptoError, journal } from '$lib/journal.svelte';
 	import { MIN_PASSPHRASE_LEN, minPassphraseLengthError } from '$lib/passphrase';
 	import { session } from '$lib/session.svelte';
-	import type { JournalTheme } from '$lib/theme';
 	import { untrack } from 'svelte';
 
 	const HINT_MAX = 255;
@@ -24,7 +22,6 @@
 	let passphrase = $state('');
 	let passphraseConfirm = $state('');
 	let hint = $state('');
-	let newTheme = $state<JournalTheme>('');
 	let error = $state('');
 	let busy = $state(false);
 
@@ -89,13 +86,12 @@
 		busy = true;
 		error = '';
 		try {
-			const created = await journal.createJournal(name, passphrase, hint, newTheme);
+			const created = await journal.createJournal(name, passphrase, hint);
 			createOpen = false;
 			newName = '';
 			passphrase = '';
 			passphraseConfirm = '';
 			hint = '';
-			newTheme = '';
 			void goto(api.journal(created.id));
 		} catch (cause) {
 			error = cause instanceof Error ? cause.message : 'Could not create the journal.';
@@ -110,7 +106,6 @@
 		passphrase = '';
 		passphraseConfirm = '';
 		hint = '';
-		newTheme = '';
 		createOpen = true;
 	}
 </script>
@@ -209,7 +204,6 @@
 	bind:open={createOpen}
 	title="New journal"
 	description="Give it a name and a passphrase. Both encryption keys are derived on this device."
-	theme={newTheme || undefined}
 >
 	<label class="w-full" for="journal-name">
 		<span class="mb-1 block text-sm">Name</span>
@@ -259,7 +253,6 @@
 		/>
 		<span class="mt-1 block text-xs text-base-content/50">Shown before unlock. Not encrypted.</span>
 	</label>
-	<ThemePicker bind:value={newTheme} />
 	{#if error}
 		<p class="text-sm text-error">{error}</p>
 	{/if}

@@ -5,12 +5,7 @@
 </script>
 
 <fieldset class="w-full min-w-0 border-0 p-0">
-	<legend class="mb-2 px-0 text-sm">Theme</legend>
-	<div
-		class="grid max-h-64 scrollbar-thin grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3"
-		role="radiogroup"
-		aria-label="Theme"
-	>
+	<div class="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Theme">
 		{#each JOURNAL_THEMES as item (item.id)}
 			<button
 				type="button"
@@ -34,7 +29,5 @@
 			</button>
 		{/each}
 	</div>
-	<p class="mt-1 text-xs text-base-content/50">
-		Stored as plaintext. Colors change; corners stay silk and dim.
-	</p>
+	<p class="mt-1 text-xs text-base-content/50">Colors change; corners stay silk and dim.</p>
 </fieldset>

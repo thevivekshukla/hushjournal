@@ -1,9 +1,9 @@
 <script lang="ts">
 	import Modal from '$lib/components/Modal.svelte';
-	import ThemePicker from '$lib/components/ThemePicker.svelte';
 	import JournalChangePassphraseModal from '$lib/components/JournalChangePassphraseModal.svelte';
+	import JournalThemeModal from '$lib/components/JournalThemeModal.svelte';
 	import { formatBytes, journal, type Journal } from '$lib/journal.svelte';
-	import type { JournalTheme } from '$lib/theme';
+	import { JOURNAL_THEMES, type JournalTheme } from '$lib/theme';
 
 	const NAME_MAX = 255;
 	const HINT_MAX = 255;
@@ -13,20 +13,28 @@
 		currentJournal,
 		name = $bindable(''),
 		hint = $bindable(''),
-		mask = $bindable(false),
-		theme = $bindable('' as JournalTheme)
+		mask = $bindable(false)
 	}: {
 		open?: boolean;
 		currentJournal?: Journal;
 		name?: string;
 		hint?: string;
 		mask?: boolean;
-		theme?: JournalTheme;
 	} = $props();
 
 	let error = $state('');
 	let busy = $state(false);
 	let changeOpen = $state(false);
+	let themeOpen = $state(false);
+	let themeDraft = $state<JournalTheme>('');
+	const themeLabel = $derived(
+		JOURNAL_THEMES.find((item) => item.id === (currentJournal?.theme ?? ''))?.label ?? 'App default'
+	);
+
+	function openTheme() {
+		themeDraft = currentJournal?.theme ?? '';
+		themeOpen = true;
+	}
 
 	async function save() {
 		if (!currentJournal) return;
@@ -41,8 +49,7 @@
 			await journal.updateJournal(currentJournal.id, {
 				name: trimmed,
 				passphraseHint: hint,
-				mask,
-				theme
+				mask
 			});
 			open = false;
 		} catch (cause) {
@@ -56,8 +63,8 @@
 <Modal
 	bind:open
 	title="Edit journal"
-	description="Name, hint, mask, and theme are stored as plaintext."
-	theme={theme || undefined}
+	description="Name, hint, and mask are stored as plaintext."
+	theme={currentJournal?.theme || undefined}
 >
 	<label class="w-full" for="journal-edit-name">
 		<span class="mb-1 block text-sm">Name</span>
@@ -101,7 +108,13 @@
 			bind:checked={mask}
 		/>
 	</label>
-	<ThemePicker bind:value={theme} />
+	<div class="flex items-center justify-between gap-3">
+		<span>
+			<span class="block text-sm">Theme</span>
+			<span class="mt-1 block text-xs text-base-content/50">{themeLabel}</span>
+		</span>
+		<button type="button" class="btn shrink-0 btn-outline btn-sm" onclick={openTheme}>Change</button>
+	</div>
 	<button
 		type="button"
 		class="btn self-start btn-outline btn-sm"
@@ -131,3 +144,4 @@
 </Modal>
 
 <JournalChangePassphraseModal bind:open={changeOpen} {currentJournal} />
+<JournalThemeModal bind:open={themeOpen} bind:draft={themeDraft} {currentJournal} />
