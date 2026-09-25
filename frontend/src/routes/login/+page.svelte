@@ -283,6 +283,12 @@
 					Your journal passphrase never leaves this device.
 				{/if}
 			</p>
+			<p class="mt-3 text-xs leading-relaxed text-base-content/50">
+				By using HushJournal, you agree to our
+				<a class="link" href="https://hushjournal.com/legal/privacy-policy">privacy policy</a>
+				and
+				<a class="link" href="https://hushjournal.com/legal/terms">terms</a>.
+			</p>
 		</div>
 	</main>
 </div>
