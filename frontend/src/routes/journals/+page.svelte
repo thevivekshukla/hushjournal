@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import * as api from '$lib/api';
+	import Loader from '$lib/components/Loader.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import PassphraseField from '$lib/components/PassphraseField.svelte';
 	import PassphraseStrength from '$lib/components/PassphraseStrength.svelte';
@@ -11,7 +12,7 @@
 	import { CryptoError, journal } from '$lib/journal.svelte';
 	import { MIN_PASSPHRASE_LEN, minPassphraseLengthError } from '$lib/passphrase';
 	import { session } from '$lib/session.svelte';
-	import { untrack } from 'svelte';
+	import { onMount } from 'svelte';
 
 	const HINT_MAX = 255;
 
@@ -24,19 +25,29 @@
 	let hint = $state('');
 	let error = $state('');
 	let busy = $state(false);
+	let listReady = $state(false);
 
 	const pendingJournal = $derived(
 		pendingJournalId ? journal.getJournal(pendingJournalId) : undefined
 	);
 
-	$effect(() => {
+	onMount(() => {
 		if (!session.user) {
 			void goto(api.login());
 			return;
 		}
-		untrack(() => {
-			void journal.loadJournals();
-		});
+		let active = true;
+		void journal.loadJournals().then(
+			() => {
+				if (active) listReady = true;
+			},
+			() => {
+				if (active) listReady = false;
+			}
+		);
+		return () => {
+			active = false;
+		};
 	});
 
 	function openUnlock(id: string) {
@@ -129,45 +140,48 @@
 			</div>
 		</header>
 
-		{#if journal.loading && journal.journals.length === 0}
-			<p class="mt-10 text-sm text-base-content/60">Loading journals…</p>
-		{:else if journal.error && journal.journals.length === 0}
-			<p class="mt-10 text-sm text-error">{journal.error}</p>
-		{/if}
+		{#if listReady}
+			<section class="mt-10 grid gap-4 sm:grid-cols-2">
+				{#each journal.journals as item (item.id)}
+					<button
+						type="button"
+						class="card cursor-pointer border border-base-300 bg-base-100 text-left text-base-content transition-colors hover:bg-base-200"
+						data-theme={item.theme || undefined}
+						onclick={() => openUnlock(item.id)}
+					>
+						<div class="card-body gap-3 p-5">
+							<div class="flex items-start justify-between">
+								<h2 class="font-serif text-2xl font-semibold tracking-tight">{item.name}</h2>
+								<span class="icon-[lucide--lock-keyhole] size-5 text-base-content/50"></span>
+							</div>
+							{#if item.passphraseHint}
+								<p class="text-sm text-base-content/60">Hint: {item.passphraseHint}</p>
+							{:else}
+								<p class="text-sm text-base-content/60">Passphrase stays on this device.</p>
+							{/if}
+						</div>
+					</button>
+				{/each}
 
-		<section class="mt-10 grid gap-4 sm:grid-cols-2">
-			{#each journal.journals as item (item.id)}
 				<button
 					type="button"
-					class="card cursor-pointer border border-base-300 bg-base-100 text-left text-base-content transition-colors hover:bg-base-200"
-					data-theme={item.theme || undefined}
-					onclick={() => openUnlock(item.id)}
+					class="card cursor-pointer border border-dashed border-base-300 text-left text-base-content/70 transition-colors hover:border-base-content/30 hover:text-base-content"
+					onclick={openCreate}
 				>
-					<div class="card-body gap-3 p-5">
-						<div class="flex items-start justify-between">
-							<h2 class="font-serif text-2xl font-semibold tracking-tight">{item.name}</h2>
-							<span class="icon-[lucide--lock-keyhole] size-5 text-base-content/50"></span>
-						</div>
-						{#if item.passphraseHint}
-							<p class="text-sm text-base-content/60">Hint: {item.passphraseHint}</p>
-						{:else}
-							<p class="text-sm text-base-content/60">Passphrase stays on this device.</p>
-						{/if}
+					<div class="card-body items-start justify-center gap-2 p-5">
+						<span class="icon-[lucide--plus] size-5"></span>
+						<p class="font-medium">New journal</p>
 					</div>
 				</button>
-			{/each}
-
-			<button
-				type="button"
-				class="card cursor-pointer border border-dashed border-base-300 text-left text-base-content/70 transition-colors hover:border-base-content/30 hover:text-base-content"
-				onclick={openCreate}
-			>
-				<div class="card-body items-start justify-center gap-2 p-5">
-					<span class="icon-[lucide--plus] size-5"></span>
-					<p class="font-medium">New journal</p>
-				</div>
-			</button>
-		</section>
+			</section>
+		{:else if journal.error}
+			<p class="mt-10 text-sm text-error">{journal.error}</p>
+		{:else}
+			<div class="flex flex-1 flex-col items-center justify-center gap-3">
+				<Loader label="Loading journals" />
+				<p class="text-sm text-base-content/60">Loading journals…</p>
+			</div>
+		{/if}
 	</div>
 {/if}
 
