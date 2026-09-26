@@ -69,10 +69,10 @@
 							onValueChange={selectDate}
 							weekdayFormat="short"
 							fixedWeeks
-							class="w-[17.5rem]"
+							class="w-[19rem]"
 						>
 							{#snippet children({ months, weekdays })}
-								<Calendar.Header class="flex items-center justify-between">
+								<Calendar.Header class="flex items-center justify-between gap-1">
 									<Calendar.PrevButton
 										type="button"
 										class="btn btn-ghost btn-square btn-sm"
@@ -80,7 +80,13 @@
 									>
 										<span class="icon-[lucide--chevron-left] size-4"></span>
 									</Calendar.PrevButton>
-									<Calendar.Heading class="text-sm font-medium" />
+									<div class="flex min-w-0 items-center justify-center gap-1">
+										<Calendar.MonthSelect
+											monthFormat="short"
+											class="select select-ghost select-xs w-fit min-w-0"
+										/>
+										<Calendar.YearSelect class="select select-ghost select-xs w-fit min-w-0" />
+									</div>
 									<Calendar.NextButton
 										type="button"
 										class="btn btn-ghost btn-square btn-sm"
