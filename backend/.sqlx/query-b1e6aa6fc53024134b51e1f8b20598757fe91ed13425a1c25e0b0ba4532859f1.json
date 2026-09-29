@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO notebooks (id, journal_id, name, icon)\n            SELECT $1, $2, $3, $4\n            FROM journals\n            WHERE id = $2 AND user_id = $5\n            RETURNING id, journal_id, name, icon, total_notebook_size,\n                size_last_calculated_at, created_at, updated_at\n        ",
+  "query": "\n            SELECT s.id, s.journal_id, s.name, s.icon, s.template_entry_content,\n                s.total_notebook_size, s.size_last_calculated_at, s.created_at, s.updated_at\n            FROM notebooks s\n            JOIN journals w ON w.id = s.journal_id\n            WHERE s.id = $1 AND w.user_id = $2\n        ",
   "describe": {
     "columns": [
       {
@@ -49,6 +49,17 @@
       },
       {
         "ordinal": 4,
+        "name": "template_entry_content",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "notebooks",
+            "name": "template_entry_content"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
         "name": "total_notebook_size",
         "type_info": "Int8",
         "origin": {
@@ -59,7 +70,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "size_last_calculated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -70,7 +81,7 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -81,7 +92,7 @@
         }
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -95,9 +106,6 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid",
-        "Bytea",
-        "Text",
         "Uuid"
       ]
     },
@@ -106,11 +114,12 @@
       false,
       false,
       true,
+      true,
       false,
       true,
       false,
       true
     ]
   },
-  "hash": "2f423a2cf06e5421ef284eb9eb14b8470364ae7087a534254516ed34bfac589d"
+  "hash": "b1e6aa6fc53024134b51e1f8b20598757fe91ed13425a1c25e0b0ba4532859f1"
 }

@@ -4,7 +4,7 @@ pub mod journals;
 pub mod notebooks;
 pub mod sizes;
 
-pub use bytes::{b64, b64_opt};
+pub use bytes::{b64, b64_clearable, b64_nullable, b64_opt};
 
 use errors::AppError;
 
@@ -76,6 +76,8 @@ fn check_violation_message(message: &str) -> String {
         "invalid theme".into()
     } else if message.contains("notebooks_name_len") {
         "notebook name is too long".into()
+    } else if message.contains("notebooks_template_entry_content_len") {
+        "notebook template is too large".into()
     } else if message.contains("entries_title_len") {
         "entry title is too long".into()
     } else if message.contains("entries_content_len") {

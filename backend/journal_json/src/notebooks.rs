@@ -28,6 +28,8 @@ struct UpdateNotebook {
     name: Option<Vec<u8>>,
     #[serde(default)]
     icon: Option<String>,
+    #[serde(default, deserialize_with = "journal::b64_clearable::deserialize")]
+    template_entry_content: Option<Option<Vec<u8>>>,
 }
 
 async fn list(
@@ -76,6 +78,8 @@ async fn update(
     Json(body): Json<UpdateNotebook>,
 ) -> Result<Json<Notebook>, AppError> {
     let icon_set = body.icon.is_some();
+    let template_set = body.template_entry_content.is_some();
+    let template = body.template_entry_content.flatten();
     Ok(Json(
         notebooks::update(
             &state.db,
@@ -84,6 +88,8 @@ async fn update(
             body.name.as_deref(),
             icon_set,
             body.icon.as_deref(),
+            template_set,
+            template.as_deref(),
         )
         .await?,
     ))

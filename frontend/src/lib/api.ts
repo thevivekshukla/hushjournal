@@ -59,6 +59,7 @@ export type ApiNotebook = {
 	journal_id: string;
 	name: string;
 	icon: string | null;
+	template_entry_content: string | null;
 	total_notebook_size: number;
 	size_last_calculated_at: string | null;
 	created_at: string;
@@ -136,7 +137,10 @@ export const createNotebook = (journalId: string, body: { name: string; icon?: s
 		method: 'POST',
 		body: JSON.stringify(body)
 	});
-export const updateNotebook = (id: string, body: { name?: string; icon?: string }) =>
+export const updateNotebook = (
+	id: string,
+	body: { name?: string; icon?: string; template_entry_content?: string | null }
+) =>
 	apiFetch<ApiNotebook>(notebook(id), {
 		method: 'PATCH',
 		body: JSON.stringify(body)

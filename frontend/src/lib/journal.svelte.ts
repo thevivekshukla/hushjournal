@@ -4,6 +4,7 @@ import {
 	bytesToBase64,
 	createJournalSecrets,
 	CryptoError,
+	decryptBytes,
 	decryptText,
 	encryptText,
 	equalBytes,
@@ -33,6 +34,7 @@ export type Notebook = {
 	journalId: string;
 	name: string;
 	icon: string;
+	templateEntryContent: string | null;
 	totalSize: number;
 	sizeLastCalculatedAt: string | null;
 };
@@ -114,9 +116,22 @@ function mapJournal(row: api.ApiJournal): Journal {
 	};
 }
 
+const textDecoder = new TextDecoder();
+
 function openField(dek: Uint8Array, blob: string, purpose: Purpose, id: string) {
 	try {
 		return decryptText(dek, base64ToBytes(blob), purpose, id);
+	} catch {
+		return null;
+	}
+}
+
+function openTemplate(dek: Uint8Array, blob: string, id: string) {
+	try {
+		const text = textDecoder.decode(
+			decryptBytes(dek, base64ToBytes(blob), 'notebook.template', id)
+		);
+		return text || null;
 	} catch {
 		return null;
 	}
@@ -133,6 +148,9 @@ function mapNotebook(
 			journalId: row.journal_id,
 			name: opened?.text ?? 'Unable to decrypt',
 			icon: notebookIcon(row.icon),
+			templateEntryContent: row.template_entry_content
+				? openTemplate(dek, row.template_entry_content, row.id)
+				: null,
 			totalSize: row.total_notebook_size ?? 0,
 			sizeLastCalculatedAt: row.size_last_calculated_at
 		},
@@ -441,14 +459,22 @@ class JournalStore {
 		return mapped.notebook;
 	}
 
-	async updateNotebook(id: string, patch: { name?: string; icon?: string }) {
+	async updateNotebook(
+		id: string,
+		patch: { name?: string; icon?: string; templateEntryContent?: string | null }
+	) {
 		this.#bump(id);
 		const dek = session.requireDek();
-		const body: { name?: string; icon?: string } = {};
+		const body: { name?: string; icon?: string; template_entry_content?: string | null } = {};
 		if (patch.name !== undefined) {
 			body.name = this.#sealed(dek, patch.name, 'notebook.name', id);
 		}
 		if (patch.icon !== undefined) body.icon = patch.icon;
+		if (patch.templateEntryContent !== undefined) {
+			body.template_entry_content = patch.templateEntryContent
+				? this.#sealed(dek, patch.templateEntryContent, 'notebook.template', id)
+				: null;
+		}
 		const mapped = mapNotebook(await api.updateNotebook(id, body), dek);
 		this.notebooks = this.notebooks.map((item) => (item.id === id ? mapped.notebook : item));
 		if (mapped.legacy) void this.#rebindNotebook(mapped.notebook);
@@ -577,9 +603,10 @@ class JournalStore {
 
 	async createEntry(notebookId: string, title = formatEntryDate()) {
 		const dek = session.requireDek();
+		const template = this.notebooks.find((item) => item.id === notebookId)?.templateEntryContent;
 		const row = await api.createEntry(notebookId, {
 			title: bytesToBase64(encryptText(dek, title, 'entry.title')),
-			content: bytesToBase64(encryptText(dek, '', 'entry.content')),
+			content: bytesToBase64(encryptText(dek, template || '', 'entry.content')),
 			entry_date: isoDate()
 		});
 		const mapped = mapFullEntry(row, dek);

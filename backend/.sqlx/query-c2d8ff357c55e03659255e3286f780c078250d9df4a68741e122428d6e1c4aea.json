@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT id, journal_id, name, icon, total_notebook_size,\n                size_last_calculated_at, created_at, updated_at\n            FROM notebooks\n            WHERE journal_id = $1\n            ORDER BY created_at ASC, id ASC\n        ",
+  "query": "\n            INSERT INTO notebooks (id, journal_id, name, icon)\n            SELECT $1, $2, $3, $4\n            FROM journals\n            WHERE id = $2 AND user_id = $5\n            RETURNING id, journal_id, name, icon, template_entry_content, total_notebook_size,\n                size_last_calculated_at, created_at, updated_at\n        ",
   "describe": {
     "columns": [
       {
@@ -49,6 +49,17 @@
       },
       {
         "ordinal": 4,
+        "name": "template_entry_content",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "notebooks",
+            "name": "template_entry_content"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
         "name": "total_notebook_size",
         "type_info": "Int8",
         "origin": {
@@ -59,7 +70,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "size_last_calculated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -70,7 +81,7 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -81,7 +92,7 @@
         }
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -94,6 +105,10 @@
     ],
     "parameters": {
       "Left": [
+        "Uuid",
+        "Uuid",
+        "Bytea",
+        "Text",
         "Uuid"
       ]
     },
@@ -102,11 +117,12 @@
       false,
       false,
       true,
+      true,
       false,
       true,
       false,
       true
     ]
   },
-  "hash": "31f336ad87f01b67508e0274a6425775287bfb14db8a75b1a2295ff41f048690"
+  "hash": "c2d8ff357c55e03659255e3286f780c078250d9df4a68741e122428d6e1c4aea"
 }

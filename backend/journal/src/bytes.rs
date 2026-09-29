@@ -27,6 +27,37 @@ pub mod b64_opt {
     }
 }
 
+/// PATCH field: missing stays unchanged (`None` via `serde(default)`), JSON null clears
+/// (`Some(None)`), and a base64 string sets the ciphertext (`Some(Some(bytes))`).
+pub mod b64_clearable {
+    use super::*;
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Option<Option<Vec<u8>>>, D::Error> {
+        match Option::<String>::deserialize(deserializer)? {
+            None => Ok(Some(None)),
+            Some(value) => decode(&value)
+                .map(|bytes| Some(Some(bytes)))
+                .map_err(serde::de::Error::custom),
+        }
+    }
+}
+
+pub mod b64_nullable {
+    use super::*;
+
+    pub fn serialize<S: Serializer>(
+        data: &Option<Vec<u8>>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        match data {
+            Some(bytes) => serializer.serialize_str(&STANDARD.encode(bytes)),
+            None => serializer.serialize_none(),
+        }
+    }
+}
+
 fn decode(value: &str) -> Result<Vec<u8>, base64::DecodeError> {
     STANDARD.decode(value.trim())
 }

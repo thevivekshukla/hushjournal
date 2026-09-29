@@ -5,7 +5,7 @@ use sqlx::PgPool;
 use utils::generate_uuid;
 use uuid::Uuid;
 
-use crate::{MAX_ICON_LEN, NOTEBOOK_NAME_MAX, map_db, require_bytes_max};
+use crate::{ENTRY_CONTENT_MAX, MAX_ICON_LEN, NOTEBOOK_NAME_MAX, map_db, require_bytes_max};
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct Notebook {
@@ -13,6 +13,8 @@ pub struct Notebook {
     pub journal_id: Uuid,
     #[serde(with = "crate::b64")]
     pub name: Vec<u8>,
+    #[serde(serialize_with = "crate::b64_nullable::serialize")]
+    pub template_entry_content: Option<Vec<u8>>,
     pub icon: Option<String>,
     pub total_notebook_size: i64,
     pub size_last_calculated_at: Option<DateTime<Utc>>,
@@ -39,7 +41,7 @@ pub async fn list(
     sqlx::query_as!(
         Notebook,
         r#"
-            SELECT id, journal_id, name, icon, total_notebook_size,
+            SELECT id, journal_id, name, icon, template_entry_content, total_notebook_size,
                 size_last_calculated_at, created_at, updated_at
             FROM notebooks
             WHERE journal_id = $1
@@ -56,8 +58,8 @@ pub async fn get(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<Notebook, App
     sqlx::query_as!(
         Notebook,
         r#"
-            SELECT s.id, s.journal_id, s.name, s.icon, s.total_notebook_size,
-                s.size_last_calculated_at, s.created_at, s.updated_at
+            SELECT s.id, s.journal_id, s.name, s.icon, s.template_entry_content,
+                s.total_notebook_size, s.size_last_calculated_at, s.created_at, s.updated_at
             FROM notebooks s
             JOIN journals w ON w.id = s.journal_id
             WHERE s.id = $1 AND w.user_id = $2
@@ -88,7 +90,7 @@ pub async fn create(
             SELECT $1, $2, $3, $4
             FROM journals
             WHERE id = $2 AND user_id = $5
-            RETURNING id, journal_id, name, icon, total_notebook_size,
+            RETURNING id, journal_id, name, icon, template_entry_content, total_notebook_size,
                 size_last_calculated_at, created_at, updated_at
         "#,
         generate_uuid(),
@@ -110,12 +112,21 @@ pub async fn update(
     name: Option<&[u8]>,
     icon_set: bool,
     icon: Option<&str>,
+    template_set: bool,
+    template_entry_content: Option<&[u8]>,
 ) -> Result<Notebook, AppError> {
-    if name.is_none() && !icon_set {
+    if name.is_none() && !icon_set && !template_set {
         return Err(AppError::BadRequest("no fields to update".into()));
     }
     if let Some(name) = name {
         require_bytes_max(name, "name", NOTEBOOK_NAME_MAX)?;
+    }
+    if let Some(template_entry_content) = template_entry_content {
+        require_bytes_max(
+            template_entry_content,
+            "template_entry_content",
+            ENTRY_CONTENT_MAX,
+        )?;
     }
     let icon = if icon_set {
         normalize_icon(icon)?
@@ -128,17 +139,23 @@ pub async fn update(
         r#"
             UPDATE notebooks s
             SET name = COALESCE($3, s.name),
-                icon = CASE WHEN $4 THEN $5 ELSE s.icon END
+                icon = CASE WHEN $4 THEN $5 ELSE s.icon END,
+                template_entry_content = CASE
+                    WHEN $6 THEN $7
+                    ELSE s.template_entry_content
+                END
             FROM journals w
             WHERE s.id = $1 AND s.journal_id = w.id AND w.user_id = $2
-            RETURNING s.id, s.journal_id, s.name, s.icon, s.total_notebook_size,
-                s.size_last_calculated_at, s.created_at, s.updated_at
+            RETURNING s.id, s.journal_id, s.name, s.icon, s.template_entry_content,
+                s.total_notebook_size, s.size_last_calculated_at, s.created_at, s.updated_at
         "#,
         id,
         user_id,
         name,
         icon_set,
         icon,
+        template_set,
+        template_entry_content,
     )
     .fetch_optional(pool)
     .await

@@ -9,6 +9,7 @@
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import UserMenu from '$lib/components/UserMenu.svelte';
 	import JournalEditModal from '$lib/components/JournalEditModal.svelte';
+	import NotebookTemplateModal from '$lib/components/NotebookTemplateModal.svelte';
 	import {
 		CryptoError,
 		NOTEBOOK_ICONS,
@@ -31,6 +32,8 @@
 	let editingNotebookId = $state<string | null>(null);
 	let editNotebookName = $state('');
 	let editNotebookIcon = $state<string>(NOTEBOOK_ICONS[0]);
+	let templateOpen = $state(false);
+	let templateDraft = $state('');
 	let deleteNotebookOpen = $state(false);
 	let journalEditOpen = $state(false);
 	let editName = $state('');
@@ -234,6 +237,12 @@
 		} finally {
 			busy = false;
 		}
+	}
+
+	function openTemplate() {
+		if (!editingNotebook) return;
+		templateDraft = editingNotebook.templateEntryContent ?? '';
+		templateOpen = true;
 	}
 
 	function requestDeleteNotebook() {
@@ -723,6 +732,19 @@
 				{/each}
 			</div>
 		</div>
+		<div class="flex items-center justify-between gap-3">
+			<span>
+				<span class="block text-sm">Template</span>
+				<span class="mt-1 block text-xs text-base-content/50">
+					{editingNotebook?.templateEntryContent
+						? 'New notes start with this text.'
+						: 'New notes start empty.'}
+				</span>
+			</span>
+			<button type="button" class="btn shrink-0 btn-outline btn-sm" onclick={openTemplate}>
+				Template
+			</button>
+		</div>
 	</form>
 	{#if editingNotebook}
 		<p class="text-sm text-base-content/70">
@@ -746,6 +768,13 @@
 		>
 	{/snippet}
 </Modal>
+
+<NotebookTemplateModal
+	bind:open={templateOpen}
+	bind:draft={templateDraft}
+	notebook={editingNotebook ?? undefined}
+	theme={journalThemeId}
+/>
 
 <Modal
 	bind:open={deleteNotebookOpen}
