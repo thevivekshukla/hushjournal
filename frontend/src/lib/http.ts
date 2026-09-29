@@ -14,13 +14,17 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
 	onUnauthorized = handler;
 }
 
-export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+export async function apiFetch<T>(
+	path: string,
+	init: RequestInit = {},
+	fetcher: typeof fetch = fetch
+): Promise<T> {
 	const headers = new Headers(init.headers);
 	if (init.body !== undefined && !headers.has('Content-Type')) {
 		headers.set('Content-Type', 'application/json');
 	}
 
-	const response = await fetch(path, {
+	const response = await (fetcher ?? fetch)(path, {
 		...init,
 		credentials: 'include',
 		headers

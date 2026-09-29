@@ -85,8 +85,9 @@ export type ApiEntryPage = {
 	next_cursor: string | null;
 };
 
-export const getAppConfig = () => apiFetch<ApiAppConfig>(appConfig());
-export const getUser = () => apiFetch<ApiUser>(user());
+export const getAppConfig = (fetcher?: typeof fetch) =>
+	apiFetch<ApiAppConfig>(appConfig(), {}, fetcher);
+export const getUser = (fetcher?: typeof fetch) => apiFetch<ApiUser>(user(), {}, fetcher);
 export const logoutUser = () => apiFetch<void>(logout(), { method: 'POST' });
 export const loginWithPassword = (body: { username: string; password: string }) =>
 	apiFetch<ApiUser>(passwordLogin(), {

@@ -18,10 +18,6 @@
 	let showPasswordForm = $derived(!session.appConfig.disable_password_form);
 	let showSignupForm = $derived(showPasswordForm && !session.appConfig.disable_user_signup);
 
-	$effect(() => {
-		if (session.user) void goto(api.journals());
-	});
-
 	function selectTab(next: 'signin' | 'signup') {
 		tab = next;
 		error = '';

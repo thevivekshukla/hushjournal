@@ -43,12 +43,12 @@ class Session {
 		return this.#dek;
 	}
 
-	async hydrate() {
+	async hydrate(fetcher: typeof fetch = fetch) {
 		if (this.ready) return;
 		this.loadError = null;
 		const [userResult, configResult] = await Promise.allSettled([
-			api.getUser(),
-			api.getAppConfig()
+			api.getUser(fetcher),
+			api.getAppConfig(fetcher)
 		]);
 		if (userResult.status === 'fulfilled') {
 			this.user = mapUser(userResult.value);
