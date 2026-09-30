@@ -1,0 +1,10 @@
+.git
+**/.DS_Store
+**/node_modules
+**/target
+frontend/build
+frontend/.svelte-kit
+backend/bin/hushjournal/static/*
+!backend/bin/hushjournal/static/.gitkeep
+**/.env
+**/.env.local
