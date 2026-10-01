@@ -1,0 +1,1 @@
+HushJournal is an end-to-end encrypted Journal web app.
