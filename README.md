@@ -72,11 +72,11 @@ Sign in with Google or a username and password.
 
 The journal list. Each journal stays locked until you enter its passphrase.
 
-![Journal list](screenshots/02.png)
+![New journal dialog](screenshots/03.png)
 
 Create a journal. The passphrase is derived on this device and is not stored on the server.
 
-![New journal dialog](screenshots/03.png)
+![Journal list](screenshots/02.png)
 
 Unlock a journal. The server never sees the passphrase.
 
