@@ -66,4 +66,28 @@ volumes:
 
 ## Screenshots
 
+Sign in with Google or a username and password.
+
+![Sign in page](screenshots/01.png)
+
+The journal list. Each journal stays locked until you enter its passphrase.
+
+![Journal list](screenshots/02.png)
+
+Create a journal. The passphrase is derived on this device and is not stored on the server.
+
+![New journal dialog](screenshots/03.png)
+
+Unlock a journal. The server never sees the passphrase.
+
+![Unlock journal dialog](screenshots/04.png)
+
+A notebook of entries. Titles and content are encrypted before they leave the browser.
+
+![Entry editor](screenshots/05.png)
+
+Each journal can use one of 20 color themes. The theme name is stored as plaintext.
+
+![Journal theme picker](screenshots/06.png)
+
 ## LICENSE
