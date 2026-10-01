@@ -31,6 +31,37 @@ docker run --rm \
 Use docker compose to run both postgres server and HushJournal server in same network.
 
 ```yml
+services:
+  db:
+    image: postgres:18
+    environment:
+      TZ: UTC
+      PGTZ: UTC
+      POSTGRES_USER: hushjournal
+      POSTGRES_PASSWORD: hushjournal
+      POSTGRES_DB: hushjournal
+    command: ["postgres", "-c", "timezone=UTC"]
+    volumes:
+      - hushjournal_postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hushjournal -d hushjournal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  hushjournal:
+    image: thevivekshukla/hushjournal:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://hushjournal:hushjournal@db:5432/hushjournal
+      APP_ORIGIN: http://127.0.0.1:8000
+    ports:
+      - "8000:8000"
+
+volumes:
+  hushjournal_postgres:
 ```
 
 ## Screenshots
