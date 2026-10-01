@@ -91,3 +91,5 @@ Each journal can use one of 20 color themes. The theme name is stored as plainte
 ![Journal theme picker](screenshots/06.png)
 
 ## LICENSE
+
+HushJournal is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). The full text is in the LICENSE file.
